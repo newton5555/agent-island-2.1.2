@@ -14,11 +14,14 @@ namespace AgentIsland.UI;
 /// docked to an edge of the chosen screen (top-center by default). Fully
 /// transparent pixels pass clicks through to whatever is behind, so only the
 /// black silhouette is interactive — the WPF equivalent of the macOS hitTest
-/// override.
+/// override. The native window style is switched with the global cursor so
+/// this remains true when the underlying app belongs to another process.
 public partial class IslandWindow : Window
 {
     private readonly IslandModel _model = IslandModel.Shared;
     private System.Windows.Interop.HwndSource? _windowSource;
+    private DispatcherTimer? _mouseHitTestTimer;
+    private bool _mouseClickThrough;
 
     private const int WmNcHitTest = 0x0084;
     private const int HtTransparent = -1;
@@ -67,6 +70,9 @@ public partial class IslandWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        _mouseHitTestTimer?.Stop();
+        _mouseHitTestTimer = null;
+        SetMouseClickThrough(false);
         _windowSource?.RemoveHook(WindowMessageHook);
         _windowSource = null;
         base.OnClosed(e);
@@ -88,25 +94,40 @@ public partial class IslandWindow : Window
         return new IntPtr(HtTransparent);
     }
 
-    /// WM_NCHITTEST carries screen coordinates in physical pixels. WPF's
-    /// PointFromScreen performs the per-monitor-DPI conversion before we test
-    /// against the current animated silhouette, so the rule stays correct at
-    /// every interface scale and during open/close morphs.
+    /// WM_NCHITTEST carries screen coordinates in physical pixels. Derive the
+    /// current silhouette's screen rectangle with PointToScreen instead of
+    /// converting the message point back through the visual tree: the former
+    /// keeps the comparison in one coordinate space across per-monitor DPI,
+    /// LayoutTransform scaling, and open/close morphs.
     private bool IsPointInsideSilhouette(IntPtr lParam)
     {
         var raw = lParam.ToInt64();
-        var screenPoint = new Point(
-            unchecked((short)(raw & 0xFFFF)),
-            unchecked((short)((raw >> 16) & 0xFFFF)));
+        var screenX = unchecked((short)(raw & 0xFFFF));
+        var screenY = unchecked((short)((raw >> 16) & 0xFFFF));
+        return IsPointInsideSilhouette(new Point(screenX, screenY));
+    }
 
+    private bool IsPointInsideSilhouette(Point screenPoint)
+    {
         try
         {
-            var point = Silhouette.PointFromScreen(screenPoint);
             var width = Silhouette.ActualWidth;
             var height = Silhouette.ActualHeight;
-            if (width <= 0 || height <= 0
-                || point.X < 0 || point.Y < 0
-                || point.X > width || point.Y > height)
+            if (width <= 0 || height <= 0) return false;
+
+            var topLeft = Silhouette.PointToScreen(new Point(0, 0));
+            var bottomRight = Silhouette.PointToScreen(new Point(width, height));
+            var screenWidth = bottomRight.X - topLeft.X;
+            var screenHeight = bottomRight.Y - topLeft.Y;
+            if (screenWidth <= 0 || screenHeight <= 0) return false;
+
+            // Normalize the native screen point into the silhouette's local
+            // coordinates. This avoids a second screen-to-DIP conversion and
+            // keeps the corner test aligned with Border's CornerRadius.
+            var point = new Point(
+                (screenPoint.X - topLeft.X) / screenWidth * width,
+                (screenPoint.Y - topLeft.Y) / screenHeight * height);
+            if (point.X < 0 || point.Y < 0 || point.X > width || point.Y > height)
             {
                 return false;
             }
@@ -136,6 +157,65 @@ public partial class IslandWindow : Window
             // underlying window receive that point.
             return false;
         }
+    }
+
+    /// HTTRANSPARENT is only forwarded to windows on the same GUI thread.
+    /// Agent Island normally sits above another process, so use the layered
+    /// window's WS_EX_TRANSPARENT style while the cursor is outside the real
+    /// silhouette. The timer still sees the global cursor and removes the
+    /// style as soon as the cursor enters the island, preserving clicks and
+    /// floating-mode drag behavior.
+    private void StartMouseHitTestWatchdog()
+    {
+        if (_mouseHitTestTimer is not null) return;
+
+        var timer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(16),
+        };
+        timer.Tick += (_, _) => UpdateMouseHitTestMode();
+        _mouseHitTestTimer = timer;
+        _teardown.Add(timer.Stop);
+        timer.Start();
+        UpdateMouseHitTestMode();
+    }
+
+    private void UpdateMouseHitTestMode()
+    {
+        if (!IsLoaded || !IsVisible || !GetCursorPos(out var cursor)) return;
+
+        var inside = IsPointInsideSilhouette(new Point(cursor.X, cursor.Y));
+        SetMouseClickThrough(!inside);
+    }
+
+    private void SetMouseClickThrough(bool clickThrough)
+    {
+        if (_mouseClickThrough == clickThrough) return;
+
+        var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero) return;
+
+        var extendedStyle = IntPtr.Size == 8
+            ? GetWindowLongPtr64(handle, GwlExStyle).ToInt64()
+            : GetWindowLong32(handle, GwlExStyle);
+        var nextStyle = clickThrough
+            ? extendedStyle | WsExTransparent
+            : extendedStyle & ~WsExTransparent;
+
+        if (IntPtr.Size == 8)
+        {
+            SetWindowLongPtr64(handle, GwlExStyle, new IntPtr(nextStyle));
+        }
+        else
+        {
+            SetWindowLong32(handle, GwlExStyle, unchecked((int)nextStyle));
+        }
+
+        // Refresh the non-client hit-test cache without moving, resizing,
+        // reordering, or activating the island.
+        SetWindowPos(handle, IntPtr.Zero, 0, 0, 0, 0,
+            SwpNoMove | SwpNoSize | SwpNoZOrder | SwpNoActivate | SwpFrameChanged);
+        _mouseClickThrough = clickThrough;
     }
 
     private static bool InsideCorner(Point point, double centerX, double centerY, double radius)
@@ -215,6 +295,7 @@ public partial class IslandWindow : Window
         Closed += (_, _) => { foreach (var teardown in _teardown) teardown(); };
 
         ApplySizeInstant();
+        StartMouseHitTestWatchdog();
         BuildExpandedChrome();
 
         System.ComponentModel.PropertyChangedEventHandler onActivity =
@@ -571,6 +652,37 @@ public partial class IslandWindow : Window
     /// drop the band) and a stray Hide. A slow sweep re-asserts both.
     /// SetWindowPos with NOACTIVATE never steals focus, so the sweep is
     /// invisible when nothing was wrong.
+    private const int GwlExStyle = -20;
+    private const long WsExTransparent = 0x00000020L;
+
+    [System.Runtime.InteropServices.StructLayout(
+        System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct NativePoint
+    {
+        public int X;
+        public int Y;
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out NativePoint point);
+
+    [System.Runtime.InteropServices.DllImport(
+        "user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
+    private static extern IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
+
+    [System.Runtime.InteropServices.DllImport(
+        "user32.dll", EntryPoint = "GetWindowLongW", SetLastError = true)]
+    private static extern int GetWindowLong32(IntPtr hWnd, int nIndex);
+
+    [System.Runtime.InteropServices.DllImport(
+        "user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+    private static extern IntPtr SetWindowLongPtr64(
+        IntPtr hWnd, int nIndex, IntPtr value);
+
+    [System.Runtime.InteropServices.DllImport(
+        "user32.dll", EntryPoint = "SetWindowLongW", SetLastError = true)]
+    private static extern int SetWindowLong32(IntPtr hWnd, int nIndex, int value);
+
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern bool SetWindowPos(
         IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint flags);
@@ -578,7 +690,9 @@ public partial class IslandWindow : Window
     private static readonly IntPtr HwndTopmost = new(-1);
     private const uint SwpNoMove = 0x2;
     private const uint SwpNoSize = 0x1;
+    private const uint SwpNoZOrder = 0x4;
     private const uint SwpNoActivate = 0x10;
+    private const uint SwpFrameChanged = 0x20;
 
     /// Set when the user hid the island through the tray toggle — the
     /// watchdog must never fight a deliberate hide.
