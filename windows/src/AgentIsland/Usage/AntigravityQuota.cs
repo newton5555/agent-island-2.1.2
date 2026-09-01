@@ -90,18 +90,29 @@ public sealed class AntigravityQuotaSnapshot
         Note = note;
     }
 
-    /// The one pool this app surfaces: Gemini's. Antigravity also meters a
-    /// Claude/GPT pool, and it is real data — but Claude and GPT are other
-    /// providers' tiles in this app, so showing their pool under Antigravity
-    /// read as cross-wiring (owner call, 2026-08-09: 只搞 Gemini). The raw
-    /// buckets stay in the snapshot; only display narrows. An account with
-    /// no Gemini-named pool falls back to whatever exists rather than
-    /// showing nothing.
+    /// Gemini pool buckets: Antigravity provides both a 5-hour rolling pool
+    /// ("gemini-5h") and a weekly pool ("gemini-weekly") for Gemini models.
     [JsonIgnore]
-    public AntigravityQuotaBucket? Primary =>
+    public AntigravityQuotaBucket? FiveHour =>
+        Buckets.FirstOrDefault(b => b.BucketId.Contains("5h", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(b.Window, "5h", StringComparison.OrdinalIgnoreCase))
+        ?? (PrimaryBucket is { PeriodSeconds: <= 86400 } p ? p : null);
+
+    [JsonIgnore]
+    public AntigravityQuotaBucket? Weekly =>
+        Buckets.FirstOrDefault(b => b.BucketId.Contains("weekly", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(b.Window, "weekly", StringComparison.OrdinalIgnoreCase))
+        ?? (PrimaryBucket is { PeriodSeconds: > 86400 } p ? p : null);
+
+    [JsonIgnore]
+    private AntigravityQuotaBucket? PrimaryBucket =>
         Buckets.FirstOrDefault(b => b.BucketId.StartsWith("gemini", StringComparison.OrdinalIgnoreCase))
         ?? Buckets.FirstOrDefault(b => b.GroupLabel.Contains("gemini", StringComparison.OrdinalIgnoreCase))
         ?? Buckets.FirstOrDefault();
+
+    /// The primary pool this app surfaces for the island pill and single-window fallbacks.
+    [JsonIgnore]
+    public AntigravityQuotaBucket? Primary => FiveHour ?? PrimaryBucket;
 }
 
 /// Decoders for the local language server's JSON replies. Absence is data

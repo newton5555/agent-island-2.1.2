@@ -42,7 +42,9 @@ public partial class IslandWindow : Window
         LeftLogo.Tool = TriggerTool.Claude;
         RightLogo.Tool = TriggerTool.Codex;
         LeftPill.Tool = TriggerTool.Claude;
+        LeftPill.Mirrored = false;
         RightPill.Tool = TriggerTool.Codex;
+        RightPill.Mirrored = true;
         Loaded += OnLoaded;
     }
 
@@ -130,6 +132,14 @@ public partial class IslandWindow : Window
         });
         UsageStore.Shared.PropertyChanged += onUsage;
         _teardown.Add(() => UsageStore.Shared.PropertyChanged -= onUsage);
+        AntigravityUsageStore.Shared.PropertyChanged += onUsage;
+        _teardown.Add(() => AntigravityUsageStore.Shared.PropertyChanged -= onUsage);
+        GrokUsageStore.Shared.PropertyChanged += onUsage;
+        _teardown.Add(() => GrokUsageStore.Shared.PropertyChanged -= onUsage);
+        CursorUsageStore.Shared.PropertyChanged += onUsage;
+        _teardown.Add(() => CursorUsageStore.Shared.PropertyChanged -= onUsage);
+        Model.QuotaDisplayModeStore.Shared.PropertyChanged += onUsage;
+        _teardown.Add(() => Model.QuotaDisplayModeStore.Shared.PropertyChanged -= onUsage);
 
         System.ComponentModel.PropertyChangedEventHandler onAlert = (_, args) => Dispatcher.BeginInvoke(() =>
         {
@@ -205,8 +215,16 @@ public partial class IslandWindow : Window
         _leftTool = slots.Count > 0 ? slots[0].ToTriggerTool() : null;
         _rightTool = slots.Count > 1 ? slots[1].ToTriggerTool() : null;
 
-        if (_leftTool is { } left) LeftLogo.Tool = left;
-        if (_rightTool is { } right) RightLogo.Tool = right;
+        if (_leftTool is { } left)
+        {
+            LeftLogo.Tool = left;
+            LeftPill.Tool = left;
+        }
+        if (_rightTool is { } right)
+        {
+            RightLogo.Tool = right;
+            RightPill.Tool = right;
+        }
         // The logo's fixed grid column reserves its slot either way, so we
         // fade opacity (the macOS openMorph spring) rather than hard-toggle
         // Visibility — toggling a provider springs the mark in/out.
@@ -906,12 +924,14 @@ public partial class IslandWindow : Window
             System.Windows.Controls.Grid.SetColumn(LeftPill, 4);
             LeftPill.HorizontalAlignment = HorizontalAlignment.Right;
             LeftPill.Margin = new Thickness(6, 0, 14, 0);
+            LeftPill.Mirrored = true;
         }
         else
         {
             System.Windows.Controls.Grid.SetColumn(LeftPill, 0);
             LeftPill.HorizontalAlignment = HorizontalAlignment.Left;
             LeftPill.Margin = new Thickness(14, 0, 6, 0);
+            LeftPill.Mirrored = false;
         }
 
         if (rightSolo)
@@ -919,12 +939,14 @@ public partial class IslandWindow : Window
             System.Windows.Controls.Grid.SetColumn(RightPill, 0);
             RightPill.HorizontalAlignment = HorizontalAlignment.Left;
             RightPill.Margin = new Thickness(14, 0, 6, 0);
+            RightPill.Mirrored = false;
         }
         else
         {
             System.Windows.Controls.Grid.SetColumn(RightPill, 4);
             RightPill.HorizontalAlignment = HorizontalAlignment.Right;
             RightPill.Margin = new Thickness(6, 0, 14, 0);
+            RightPill.Mirrored = true;
         }
     }
 
@@ -1200,22 +1222,30 @@ public partial class IslandWindow : Window
 
     private DispatcherTimer? _sweepTimer;
 
+    private static bool IsToolLoading(TriggerTool tool) => tool switch
+    {
+        TriggerTool.Claude or TriggerTool.Codex => UsageStore.Shared.Loading,
+        TriggerTool.Antigravity => AntigravityUsageStore.Shared.Loading,
+        TriggerTool.Grok => GrokUsageStore.Shared.Loading,
+        TriggerTool.Cursor => CursorUsageStore.Shared.Loading,
+        _ => false,
+    };
+
     private void UpdatePills()
     {
-        var store = UsageStore.Shared;
         var engine = Model.AlertEngine.Shared;
         if (_leftTool is { } leftTool)
         {
             LeftPill.Update(
                 UsagePage.UsageFor(leftTool.ToDisplayProvider()).FiveHour,
-                store.Loading,
+                IsToolLoading(leftTool),
                 engine.SeverityFor(leftTool));
         }
         if (_rightTool is { } rightTool)
         {
             RightPill.Update(
                 UsagePage.UsageFor(rightTool.ToDisplayProvider()).FiveHour,
-                store.Loading,
+                IsToolLoading(rightTool),
                 engine.SeverityFor(rightTool));
         }
 

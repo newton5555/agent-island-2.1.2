@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows.Threading;
 using AgentIsland.Alarm;
+using AgentIsland.Model;
 using AgentIsland.Usage;
 
 namespace AgentIsland.Core;
@@ -231,14 +232,8 @@ public sealed class ActivityMonitor : INotifyPropertyChanged
         RaiseAll();
     }
 
-    /// Only Claude and Codex have a usage endpoint; the guests carry no quota
-    /// of their own, so nothing can overlay onto their scan state.
-    private static AppUsage UsageFor(TriggerTool tool) => tool switch
-    {
-        TriggerTool.Claude => UsageStore.Shared.Claude,
-        TriggerTool.Codex => UsageStore.Shared.Codex,
-        _ => AppUsage.Empty,
-    };
+    private static AppUsage UsageFor(TriggerTool tool) =>
+        UI.UsagePage.UsageFor(tool.ToDisplayProvider());
 
     private void UpdateLastWorking(List<ScannedSession> sessions, DateTimeOffset now)
     {

@@ -150,7 +150,7 @@ public sealed class UsagePage : Border
     /// 30-day branch and would otherwise call Cursor's cycle a "week".
     private static string PrimaryLabelKey(DisplayProvider provider) => provider switch
     {
-        DisplayProvider.Antigravity => "week",
+        DisplayProvider.Antigravity => "5h",
         DisplayProvider.Grok => "week",
         DisplayProvider.Cursor => "30d",
         _ => "5h",
@@ -238,17 +238,31 @@ public sealed class UsagePage : Border
         _ => AppUsage.Empty,
     };
 
-    /// Antigravity surfaces ONE pool — Gemini's weekly bucket. The shared
-    /// Claude/GPT pool is real data but belongs to other providers' tiles
-    /// (owner call, 2026-08-09: 只搞 Gemini). The secondary slot stays the
-    /// "no data" sentinel, which is what marks a provider single-window.
+    /// Antigravity surfaces Gemini's quota: a 5h rolling pool and a weekly pool.
+    /// Paid tiers provide both; free tiers may report only weekly.
+    /// When both exist, they are displayed side-by-side (5h and week).
+    /// If only one exists, it cleanly falls back to single-window display.
     private static AppUsage AntigravityUsage()
     {
         var store = AntigravityUsageStore.Shared;
-        var pool = store.Snapshot?.Primary;
+        var snapshot = store.Snapshot;
+        var five = snapshot?.FiveHour;
+        var week = snapshot?.Weekly;
+
+        if (five is not null && week is not null)
+        {
+            return new AppUsage(
+                new WindowUsage(
+                    five.UsedPercent, five.ResetAt, store.StatusCaption, five.PeriodSeconds),
+                new WindowUsage(
+                    week.UsedPercent, week.ResetAt, store.StatusCaption, week.PeriodSeconds),
+                store.TierBadge?.ToLowerInvariant());
+        }
+
+        var single = five ?? week ?? snapshot?.Primary;
         return new AppUsage(
             new WindowUsage(
-                pool?.UsedPercent ?? 0, pool?.ResetAt, store.StatusCaption, pool?.PeriodSeconds),
+                single?.UsedPercent ?? 0, single?.ResetAt, store.StatusCaption, single?.PeriodSeconds),
             WindowUsage.Unknown,
             store.TierBadge?.ToLowerInvariant());
     }

@@ -90,6 +90,7 @@ public static class Program
             FormattingTests.RunAll();
             ScannerCwdTests.RunAll();
             CodexPayloadParsingTests.RunAll();
+            AntigravityQuotaTests.RunAll();
             Console.WriteLine("ALL GREEN");
             return 0;
         }

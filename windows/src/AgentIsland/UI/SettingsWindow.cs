@@ -1724,12 +1724,18 @@ public sealed class SettingsWindow : Window
         {
             parts.Add("⚠ " + ErrorDisplay.Localize(caption));
         }
-        else if (store.Snapshot?.Primary is { } pool)
+        else if (store.Snapshot is { } snapshot && (snapshot.FiveHour is not null || snapshot.Weekly is not null || snapshot.Primary is not null))
         {
             // Only the Gemini pool: Claude and GPT are other providers'
             // rows in this app, and showing their shared pool here read as
             // cross-wiring (owner call, 2026-08-09).
-            parts.Add(L10n.TrFormat("{0} {1}%", pool.ShortLabel, Percent(pool.UsedPercent)));
+            var usage = UsagePage.UsageFor(DisplayProvider.Antigravity);
+            var five = WindowCaption(usage.FiveHour);
+            var week = WindowCaption(usage.Weekly);
+            var quotaCaption = usage.SecondaryMissing || (five == week && five.StartsWith("⚠", StringComparison.Ordinal))
+                ? five
+                : $"{five} / {week}";
+            parts.Add(L10n.TrFormat("{0} {1}", snapshot.Primary?.ShortLabel ?? "Gemini", quotaCaption));
         }
         return string.Join(" · ", parts);
     }

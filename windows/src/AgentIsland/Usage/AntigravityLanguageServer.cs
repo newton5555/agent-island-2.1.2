@@ -117,6 +117,7 @@ public static class AntigravityLanguageServer
         name.Equals("agy", StringComparison.OrdinalIgnoreCase)
         || name.Equals("antigravity", StringComparison.OrdinalIgnoreCase)
         || name.Equals("antigravity-cli", StringComparison.OrdinalIgnoreCase)
+        || name.Contains("antigravity", StringComparison.OrdinalIgnoreCase)
         || name.StartsWith("language_server", StringComparison.OrdinalIgnoreCase);
 
     public static List<int> AntigravityProcessIds()
@@ -221,8 +222,8 @@ public static class AntigravityLanguageServer
             var psi = new ProcessStartInfo
             {
                 FileName = "powershell",
-                Arguments = "-NoProfile -Command \"(Get-CimInstance Win32_Process -Filter \\\"ProcessId="
-                    + pid + "\\\").CommandLine\"",
+                Arguments = "-NoProfile -Command \"(Get-CimInstance Win32_Process -Filter 'ProcessId = "
+                    + pid + "').CommandLine\"",
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,

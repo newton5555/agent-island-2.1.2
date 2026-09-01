@@ -30,6 +30,8 @@ public sealed class NotchPeekPill : TextBlock
         set => _tool = value;
     }
 
+    public bool Mirrored { get; set; }
+
     public void Update(WindowUsage usage, bool loading, Model.AlertSeverity severity = Model.AlertSeverity.None)
     {
         Inlines.Clear();
@@ -58,7 +60,7 @@ public sealed class NotchPeekPill : TextBlock
         var countdown = usage.ResetAt is { } resetAt && resetAt > now
             ? CompactCountdown(resetAt - now)
             : null;
-        var mirrored = _tool == Core.TriggerTool.Codex;
+        var mirrored = Mirrored;
         // The no-countdown placeholder names the window's REAL period.
         var periodTag = Charts.ChartTile.PeriodLabel(usage, "5h");
 
