@@ -1,0 +1,34 @@
+# The macOS app is otherwise only compiled at tag time (release.yml) —
+# a Swift break would surface mid-release and burn a version number.
+name: macOS CI
+
+on:
+  push:
+    paths:
+      - "Sources/**"
+      - "Tests/**"
+      - "build.sh"
+      - "scripts/**"
+      - ".github/workflows/macos-ci.yml"
+  pull_request:
+    paths:
+      - "Sources/**"
+      - "Tests/**"
+      - "build.sh"
+      - "scripts/**"
+      - ".github/workflows/macos-ci.yml"
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unit suites
+        run: |
+          ./scripts/test-usage-cache.sh
+          ./scripts/test-session-turn-state.sh
+          ./scripts/test-reminder-delivery-key.sh
+
+      - name: Build (auto-update disabled)
+        run: SU_FEED_URL= ./build.sh

@@ -1,0 +1,66 @@
+# WPF can't compile anywhere but Windows (the Linux/macOS SDKs ship without
+# Microsoft.NET.Sdk.WindowsDesktop), so this is the only pre-tag compile
+# check the Windows port gets.
+name: Windows CI
+
+on:
+  push:
+    paths:
+      - "windows/**"
+      - ".github/workflows/windows-ci.yml"
+  pull_request:
+    paths:
+      - "windows/**"
+      - ".github/workflows/windows-ci.yml"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Build
+        working-directory: windows
+        run: dotnet build src/AgentIsland/AgentIsland.csproj -c Release
+
+      - name: Test
+        working-directory: windows
+        run: dotnet run --project tests/AgentIsland.Tests -c Release
+
+      # A downloadable test build for every push — lets a maintainer try the
+      # branch without cutting a release/tag (which would ship to all users
+      # via auto-update). Grab it from the run's Artifacts section.
+      - name: Package test build
+        working-directory: windows
+        run: .\build.ps1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AgentIsland-win-x64-test
+          path: windows/dist/AgentIsland-*.zip
+          if-no-files-found: error
+
+      # A stable, public, no-login download for testing: refresh a single
+      # PRERELEASE (tag windows-test) with the latest zip on every push to
+      # the working branch. Prerelease + non-'v*' tag = it never occupies
+      # releases/latest and never triggers the Sparkle/Windows auto-update
+      # flows, so no existing user is affected.
+      - name: Refresh test prerelease
+        if: github.event_name == 'push' && github.ref == 'refs/heads/claude/windows-ui-layout-audit-n94f76'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete windows-test --cleanup-tag --yes --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+          gh release create windows-test windows/dist/AgentIsland-*.zip \
+            --repo "$GITHUB_REPOSITORY" \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "Windows test build (unstable)" \
+            --notes "Latest Windows test build from the windows-ui-layout-audit branch. Prerelease only — NOT shipped via auto-update. Download the zip, unzip, run AgentIsland.exe."

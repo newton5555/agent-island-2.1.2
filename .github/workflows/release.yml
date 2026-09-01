@@ -1,0 +1,109 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, for example v1.1.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - name: Resolve release tag
+        id: release
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            tag="${{ inputs.tag }}"
+            source_ref="${GITHUB_REF_NAME}"
+          else
+            tag="${GITHUB_REF_NAME}"
+            source_ref="${GITHUB_REF_NAME}"
+          fi
+          if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid tag: $tag" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "source_ref=$source_ref" >> "$GITHUB_OUTPUT"
+
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.release.outputs.source_ref }}
+
+      - name: Install DMG tooling
+        run: pipx install dmgbuild
+
+      - name: Prepare Sparkle signing key
+        shell: bash
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          if [[ -z "${SPARKLE_ED_PRIVATE_KEY:-}" ]]; then
+            echo "::error::SPARKLE_ED_PRIVATE_KEY secret is missing; cannot generate signed appcast.xml"
+            exit 1
+          fi
+          key_path="$RUNNER_TEMP/sparkle_ed_private_key"
+          printf '%s' "$SPARKLE_ED_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+          echo "SPARKLE_PRIVATE_KEY_PATH=$key_path" >> "$GITHUB_ENV"
+
+      - name: Run tests
+        run: |
+          ./scripts/test-usage-cache.sh
+          ./scripts/test-session-turn-state.sh
+          ./scripts/test-reminder-delivery-key.sh
+
+      - name: Build release assets
+        shell: bash
+        run: |
+          ./release.sh
+          test -f dist/appcast.xml
+
+      - name: Ensure GitHub release exists
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" \
+              --title "$TAG — Agent Island" \
+              --notes "Automated Agent Island release."
+
+      - name: Attach changelog notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # TAG was missing here, so VER expanded empty, awk matched nothing,
+          # and every release silently kept the "Automated release" stub.
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          VER="${TAG#v}"
+          awk -v ver="$VER" 'BEGIN{f=0} $0 ~ "^## \\["ver"\\]" {f=1} f==1 && $0 ~ "^## \\[" && $0 !~ ver {exit} f' CHANGELOG.md > /tmp/notes.md
+          if [ ! -s /tmp/notes.md ]; then
+            echo "::error::No CHANGELOG.md section found for $VER — release notes would be empty"
+            exit 1
+          fi
+          gh release edit "$TAG" --notes-file /tmp/notes.md
+
+      - name: Upload release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          version="${TAG#v}"
+          gh release upload "$TAG" \
+            "dist/AgentIsland-${version}.dmg" \
+            "dist/appcast.xml" \
+            --clobber

@@ -1,0 +1,644 @@
+"%@ %@ tokens" = "%@ %@ 个 token";
+"%@ %@ versus you %@" = "%@ %@，你 %@";
+"%@ page, %d of %d" = "%@页面，第 %d / %d 页";
+"%@ tab" = "%@标签";
+"%@, %@" = "%@，%@";
+"%@, %d%%" = "%@，%d%%";
+"%@, all tokens. Total %@, Claude %@, Codex %@." = "%@，全部 token。总计 %@，Claude %@，Codex %@";
+"%@: %@ tokens" = "%@：%@ 个 token";
+"%@: %@, %@" = "%@：%@，%@";
+"%@: %@. Claude %@, Codex %@." = "%@：%@。Claude %@，Codex %@";
+"%@%@ tokens" = "%@%@ 个 token";
+"%@ in %@. %d active days. Claude %@, Codex %@." = "%@，%@ 年。%d 个活跃日。Claude %@，Codex %@";
+"%@ TOKENS" = "%@ TOKEN";
+"%d Active Days" = "%d 个活跃日";
+"⚠ %d unpriced" = "⚠ %d 个模型缺价格";
+"$%@ cumulative" = "$%@ 累计";
+"5h" = "5小时";
+"All tokens" = "全部 token";
+"All Tokens" = "全部 Token";
+"TOTAL" = "总计";
+"Total" = "总计";
+"Approaching-limit alerts" = "接近限额提醒";
+"Alerts" = "提醒";
+"Alarm even when in front" = "前台弹窗";
+"Alarm on a finished turn even while that session's own app is frontmost" = "即使你正在使用该会话所属的应用，回合结束时也弹出提醒";
+
+"no local cost" = "本地无成本数据";
+
+"%@ mode — sessions monitored here, quota lives in Google AI Studio" = "%@ 模式——会话状态照常监控，额度请在 Google AI Studio 查看";
+
+"From two agents to five: Gemini, Grok, and Cursor arrive together, session status stretches across the island, settings start over, and Codex accounts switch in one click" = "从两家到五家：Antigravity、Grok、Cursor 一起上岛；\n会话状态贯穿全岛，设置重做，Codex 账号一键切换";
+"Three new agents arrive" = "三家新 Agent 上岛";
+"Gemini, Grok, and Cursor land beside Claude and Codex in one release — quotas, plans, and billing cycles, all read locally" = "Antigravity、Grok、Cursor 与 Claude、Codex 同批上线；\n额度、档位和账期均从本地读取";
+"Session status, island-wide" = "会话状态铺满全岛";
+"Working, stalled, your turn — live session state spans Claude, Codex, Grok, and Gemini, driven by each agent's own records" = "工作中、卡住、轮到你：\nClaude、Codex、Grok、Antigravity 的实时状态均由各自记录驱动";
+"Reports for any date" = "任意日期的报表";
+"Pick a start date and the card covers that window — every model that ran is listed, not just the top few" = "选一个起始日期，报表就覆盖那段区间——跑过的每一个模型都会列出，不再只显示前几名";
+
+"Five agents on one island: Cursor joins, sessions go five-wide, settings start over, and Codex accounts switch in one click" = "五家 Agent 同在一座岛：Cursor 加入，会话监控五家全开，设置面板推倒重来，Codex 账号一键切换";
+"Cursor joins the island" = "Cursor 上岛";
+"Billing-cycle usage and plan, read locally like everyone else — the fifth agent on the roster" = "账期用量与订阅档位，和其他四家一样在本机读取——阵容里的第五位";
+"Five agents, two slots" = "五家服务，任选两家";
+"Claude, Codex, Gemini, Grok, and Cursor — pick any two for the top bar; every selected provider keeps its full data row" = "Claude、Codex、Antigravity、Grok、Cursor 任选两家常驻顶部；\n入选服务仍显示完整数据行";
+"Sessions go five-wide" = "会话监控五家全开";
+"The island now tracks Grok and Gemini sessions too — working, stalled, your turn — driven by each agent's own records" = "岛上现在也看得见 Grok 与 Antigravity 的会话——工作中、卡住了、轮到你——由各家自己的记录驱动";
+"Codex account switching" = "Codex 账号切换";
+"Park each login under a name and swap from the menu; opt in to auto-switch when a quota runs dry, driven by real usage numbers" = "把每个登录存成命名档案，菜单里随时切换；可选开启额度用完自动换号，依据真实用量而非猜测";
+"Settings, started over" = "重来一遍的设置面板";
+"Sidebar navigation, teal for data and gold for selection, and micro-motion in every control — press, glide, land" = "侧栏导航，青色承载数据、金色标记选中，每个控件都有微动效——按下、滑行、落位";
+"Sign-in that lands right" = "一次到位的登录";
+"Claude login now mirrors the official CLI exactly, with a code fallback when the browser round-trip cannot finish" = "Claude 登录与官方 CLI 完全对齐；浏览器往返走不通时，还有授权码兜底";
+
+"Every number is computed on your own computer — Mac or Windows — from logs the agents already write. No account, no telemetry, nothing uploaded" = "每一个数字都是在你自己的电脑上算出来的——Mac 或 Windows——读的是 Agent 本来就会写的日志。不用注册、没有埋点、什么都不上传";
+"If Agent Island helps you, a star on GitHub and a share with a friend are the two things that keep it going" = "如果 Agent Island 帮到了你，去 GitHub 点一颗 Star（点个心），再分享给身边的朋友——这两件事就是对它最大的支持";
+
+"Star on GitHub" = "GitHub 点亮 Star";
+
+"Auto-switch when exhausted" = "额度用完自动切换";
+
+"Sign in with a code" = "用授权码登录";
+"Approve the page that just opened, then paste the code it shows here" = "在刚打开的页面点授权，然后把它显示的授权码粘贴到这里";
+"Paste the code" = "粘贴授权码";
+"Sign in" = "登录";
+"Copy link" = "复制链接";
+"That code did not work" = "这个授权码没能通过";
+"Copy the whole code from the page and try once more" = "把页面上的授权码完整复制一次再试";
+
+"Agents are part of every builder's day now — Claude Code, Codex, Gemini, Grok, Cursor… and whatever ships next month. They run, you wait, and nobody tells you when it is your turn again" = "Agent 已经是每个 builder 的日常——Claude Code、Codex、Antigravity、Grok、Cursor……以及下个月还会冒出来的那些。它们在跑，你在等，而没有人告诉你什么时候又轮到你";
+"Agent Island 2.0 puts them all on one island. Who is working, whose turn it is, how much quota is left, what it cost — one glance at the notch, no window switching, no terminal tabs to hunt through" = "Agent Island 2.0 把它们全部放进同一座岛。谁在干活、谁在等你、额度还剩多少、这段时间烧了多少——抬眼看一下刘海就够了，不用切窗口，不用在一堆终端标签里翻找";
+"Everything is computed on your Mac from logs the agents already write. No account, no telemetry, nothing uploaded — the island reads what is yours and shows it back" = "所有数字都在你自己的 Mac 上算出来，读的是 Agent 本来就会写的日志。不用注册、没有埋点、什么都不上传——岛只是把属于你的东西读出来，再摆回你眼前";
+
+"Switch Codex account" = "切换 Codex 账号";
+"No saved accounts yet" = "还没有保存的账号";
+"Save current account…" = "保存当前账号…";
+"Save current account" = "保存当前账号";
+"Give this login a name so you can switch back to it later" = "给这个登录起个名字，之后可以一键切回来";
+"work / personal" = "工作 / 个人";
+"Remove saved account" = "删除已保存的账号";
+"Save" = "保存";
+"Cancel" = "取消";
+
+"MODELS" = "模型";
+"Report start date" = "报告起始日期";
+"Agents are part of every builder's day now — Claude Code, Codex, Gemini, Grok, Cursor. They run, you wait, and that waiting deserves better" = "Agent 已经是每个 builder 的日常——Claude Code、Codex、Antigravity、Grok、Cursor。它们在跑，你在等，这段等待值得更好的安排";
+"Agent Island 2.0 puts five agents on one island: who is working, whose turn it is, how much quota is left — one glance, then back to building" = "Agent Island 2.0 把五家 Agent 放进同一座岛：谁在干活、谁在等你、额度还剩多少，一眼看清，然后回去继续创造";
+"Open source, local, free. If it helps you, share it or leave a star on GitHub — that is the biggest help you can give" = "开源、本地、免费。如果它帮到你，分享出去，或者在 GitHub 点一颗 star，就是对我最大的帮助";
+
+"Connect" = "接入";
+"Connect Gemini" = "接入 Gemini";
+"Run the gemini CLI in Terminal and sign in with Google. The island detects the login automatically after relaunch" = "在终端运行 gemini 并用 Google 账号登录，重启后岛会自动检测到登录";
+"Five providers — pick any two for the island" = "五家服务，任选两家常驻顶部";
+"Auto" = "自动";
+"Auto — showing on %@." = "自动 — 当前显示在 %@";
+"Auto — picks the best available screen." = "自动 — 选择最合适的屏幕";
+"Bar" = "柱状";
+"Both" = "两者";
+"Both providers hidden" = "两个服务都已隐藏";
+"BY MODEL" = "按模型";
+"Check" = "检查";
+"Check for new versions in the background and notify you when one's available." = "在后台检查新版本，有可用更新时通知你";
+"Check for updates automatically" = "自动检查更新";
+"Check now" = "立即检查";
+"Click to refresh now" = "点击立即刷新";
+"click to cycle" = "点击切换";
+"Codex" = "Codex";
+"AgentIsland panel" = "Agent Island 面板";
+"Cost" = "成本";
+"Counts everything — input, output, and cache. Mirrors ccusage." = "统计所有 token：输入、输出和缓存；与 ccusage 一致";
+"Crit" = "危急";
+"Critical" = "危急";
+"Daily token usage in %@" = "%@ 年每日 token 用量";
+"Display" = "显示";
+"General" = "通用";
+"Follows macOS" = "跟随 macOS";
+"Idle" = "空闲";
+"idle" = "空闲";
+"Input + output" = "输入 + 输出";
+"Input + output only. Matches Anthropic's claude.ai stats." = "只统计输入 + 输出；与 Anthropic 的 claude.ai 统计一致";
+"last scan %@" = "上次扫描 %@";
+"last scan %@ · pricing data %dd old" = "上次扫描 %@ · 价格数据已过 %d 天";
+"Launch at Login" = "登录时启动";
+"Move Agent Island into Applications, then relaunch it and try again" = "请先把 Agent Island 移入「应用程序」，重新打开后再试";
+"Allow Agent Island under System Settings → General → Login Items" = "请在系统设置 → 通用 → 登录项中允许 Agent Island";
+"Language" = "语言";
+"License" = "许可证";
+"Live" = "实时";
+"Look for a new version immediately." = "立即检查是否有新版本";
+"Visual effects" = "视觉效果";
+"Interface scale" = "界面缩放";
+"Non-notch screens only" = "仅无刘海屏幕生效";
+"Calm" = "清爽";
+"Vivid" = "流光";
+"Mixed Use" = "混合使用";
+"Mostly Claude" = "主要是 Claude";
+"Mostly Codex" = "主要是 Codex";
+"no %@ activity in last 5h or this week" = "过去 5 小时或本周没有 %@ 活动";
+"No Activity" = "无活动";
+"No-notch Mac" = "无刘海";
+"Notched Mac" = "有刘海";
+"Numeric" = "数字";
+"Open AgentIsland when you sign in." = "登录系统时打开 Agent Island";
+"Overview" = "概览";
+"Overview shows %@ usage history" = "概览显示 %@ 年使用历史";
+"Pinned to a specific display. Falls back to Auto if unplugged." = "固定到指定屏幕；断开后回退为自动";
+"Plan" = "套餐";
+"Plan: %@" = "套餐：%@";
+"Providers" = "服务";
+"Providers Hidden" = "服务已隐藏";
+"Quit" = "退出";
+"Quit AgentIsland" = "退出 Agent Island";
+"Re-authenticate" = "重新认证";
+"Claude" = "Claude";
+"Re-enable in Settings → Providers" = "在设置 → 服务中重新启用";
+"Refresh" = "刷新";
+"Refresh interval" = "刷新间隔";
+"Refresh now" = "立即刷新";
+"Refreshing…" = "正在刷新…";
+"resets in %@" = "%@ 后重置";
+"Resets in %@" = "%@ 后重置";
+"Language changed" = "语言已切换";
+"The new language applies now. A few date and number labels update after AgentIsland restarts." = "新语言立即生效；个别日期和数字标签会在 Agent Island 重启后更新";
+"OK" = "好";
+"Restart now" = "立即重启";
+"Ring" = "环形";
+"scanning local logs…" = "正在扫描本地日志…";
+"scanning local logs… · pricing data %dd old" = "正在扫描本地日志… · 价格数据已过 %d 天";
+"Settings" = "设置";
+"Show on" = "显示在";
+"Sparkline" = "折线";
+"Stepped" = "阶梯";
+"Claude stale" = "Claude 数据过期";
+"Codex stale" = "Codex 数据过期";
+"swipe panel to view" = "滑动面板查看";
+"swipe panel to view · pricing data %dd old" = "滑动面板查看 · 价格数据已过 %d 天";
+"Synced" = "已同步";
+"Synced %@" = "已同步 %@";
+"synced %@" = "已同步 %@";
+"Syncing" = "同步中";
+"Syncing…" = "同步中…";
+"Usage refresh failed" = "用量刷新失败";
+"Tint the island and pulse the peek pill when 5-hour usage nears your limit." = "当 5 小时用量接近限额时，为岛和预览胶囊显示提醒效果";
+"Tip: Command-click to cycle visualization" = "提示：Command 点击可切换可视化";
+"Today" = "今天";
+"Token counting" = "Token 统计";
+"Tokens" = "Token";
+"TOKENS" = "TOKEN";
+"TREND" = "趋势";
+"USD" = "USD";
+"Usage" = "用量";
+"Usage display" = "用量显示";
+"Cost display" = "成本显示";
+"Top bar" = "顶部条";
+"Screen" = "屏幕";
+"Mac type" = "Mac 机型";
+"Pick Notch for MacBooks with a camera notch. No notch suits Macs and external displays without one — the top bar gets narrower." = "有刘海的 MacBook 选「有刘海」；没有刘海的 Mac 或外接显示器选「无刘海」，顶部条会更窄";
+"Screen position" = "显示位置";
+"This Mac's screen" = "这台 Mac 的屏幕";
+"Show cost page in top panel" = "在顶部面板显示成本页";
+"Include local token cost/value as a swipe page in the island." = "把本地 token 成本和价值页加入顶部面板，可左右滑动查看";
+"Always show usage in top bar" = "在顶部常显用量";
+"Keep the 5-hour and weekly percentages beside the logos without hovering." = "无需悬停，也在 Logo 两侧显示 5 小时和本周用量百分比";
+"Updates" = "更新";
+"VALUE" = "价值";
+"Warn" = "警告";
+"Warning" = "警告";
+"Warning: %d unpriced models — totals may be incomplete." = "警告：%d 个模型缺少价格，成本总额可能偏低";
+"week" = "周";
+"30d" = "30天";
+"24h" = "24小时";
+"waiting for login…" = "等待登录…";
+"You" = "你";
+"A status companion for your AI coding agents" = "AI 编码智能体的状态伴侣";
+"⌘-click to cycle" = "⌘ 点击切换";
+"⌘1 — pull real provider data" = "⌘1 — 拉取真实服务数据";
+"%@ (hidden)" = "%@（已隐藏）";
+"%@: %d percent of 5-hour window used" = "%@：已使用 5 小时窗口的 %d%%";
+"%@: %d percent of 5-hour window used, %@" = "%@：已使用 5 小时窗口的 %d%%，%@";
+"%@: no data for 5-hour window" = "%@：5 小时窗口暂无数据";
+"Click to expand. Command-click to cycle visualization." = "点击展开。Command 点击可切换可视化";
+"Command-click to cycle visualization." = "Command 点击可切换可视化";
+"Hover to peek usage. Click to expand. Command-click to cycle visualization." = "悬停预览用量。点击展开。Command 点击可切换可视化";
+"How often to refresh." = "刷新频率";
+"Inject test percentages. Visible only when launched with CODEXISLAND_DEBUG=1." = "注入测试百分比。仅在使用 CODEXISLAND_DEBUG=1 启动时显示";
+"Preview" = "预览";
+"resets in %d hours" = "%d 小时后重置";
+"resets in %d minutes" = "%d 分钟后重置";
+"resets in %d days" = "%d 天后重置";
+"%@: %d percent of weekly window used" = "%@：已使用周窗口的 %d%%";
+"%@: %d percent of weekly window used, %@" = "%@：已使用周窗口的 %d%%，%@";
+"%@: no data for weekly window" = "%@：周窗口暂无数据";
+"%d banked resets available" = "%d 张重置卡可用";
+"Weekly report…" = "本周周报…";
+"Weekly report" = "本周周报";
+"Copy image" = "复制图片";
+"Copied" = "已复制";
+"tokens this week" = "本周 Token 消耗量";
+"≈ $%@ API value" = "≈ 相当于 $%@ 的 API 费用";
+"Close" = "关闭";
+"Share weekly report" = "分享周报";
+"Share weekly report…" = "分享本周周报…";
+"Weekly" = "周报";
+"Monthly" = "月报";
+"Share monthly report" = "分享月报";
+"Share monthly report…" = "分享本月月报…";
+"network drop" = "网络中断，已保留上次数据";
+"token refresh failed — sign in again" = "token 刷新失败，请重新登录";
+
+/* report period pager */
+"Previous week" = "上一周";
+"Next week" = "下一周";
+"Previous month" = "上个月";
+"Next month" = "下个月";
+
+/* claude re-auth: browser/profile target picker + copy-link escape hatch */
+"Copy login link" = "复制登录链接";
+"Copied — paste it into the browser that's signed in to the right account" = "已复制，请粘贴到已登录正确账号的浏览器打开";
+"Default browser" = "默认浏览器";
+"Default browser · %@" = "默认浏览器 · %@";
+"Incognito window (%@)" = "隐身窗口（%@）";
+"Account not in any browser? Incognito gives it a clean sign-in" = "账号不在任何浏览器里？用隐身窗口干净登录一次即可";
+"Choose where the sign-in opens" = "选择登录在哪里打开";
+"Sign-in opens in %@ (default browser) — the arrow menu picks another profile or an incognito window" = "登录将在 %@（系统默认浏览器）打开，点箭头可改用其他 profile 或隐身窗口";
+"Sign-in opens in your default browser — the arrow menu picks another profile or an incognito window" = "登录将在系统默认浏览器打开，点箭头可改用其他 profile 或隐身窗口";
+"Sign-in opens in %@" = "登录将在 %@ 打开";
+"Sign-in opens in an incognito %@ window" = "登录将在 %@ 隐身窗口打开";
+"Sign-in copies the login link — paste it into any signed-in browser" = "将复制登录链接，粘贴到任意已登录的浏览器打开即可";
+"Opens the Claude sign-in page with your saved browser choice — change it in Settings → Providers" = "按记住的浏览器选择打开 Claude 登录页，可到 设置 → 服务 修改";
+"Copied! Post it and bring a friend to the island 🏝️ Thanks for spreading the word" = "已复制!发出去带朋友一起上岛 🏝️ 感谢你帮 Agent Island 宣传";
+"Tip: AirDrop it to your iPhone — it lands in Photos, ready to post 📲" = "小技巧：隔空投送到 iPhone，图片直接进相册，随手就能发 📲";
+"tokens this month" = "本月 Token 消耗量";
+"Past %d weeks" = "过去 %d 周";
+"%d-day streak 🔥" = "连续 %d 天 🔥";
+"Active %d days · peak %@" = "活跃 %d 天 · 单日峰值 %@";
+"less" = "少";
+"more" = "多";
+"Share…" = "分享…";
+"Others" = "其他";
+"Details unavailable right now." = "明细暂时不可用";
+"Earned resets appear here with their expiry." = "获得的重置卡会显示在这里，附有效期";
+"expired" = "已过期";
+"valid %@ · %@" = "有效 %@ · %@ 到期";
+"Swipe to change pages." = "滑动切换页面";
+
+/* Auto-Trigger (Triggers tab) */
+"Triggers" = "自动续跑";
+"Auto-Trigger" = "自动续跑";
+"When your AI limit resets, auto-send a message so a session keeps running." = "用量恢复后，让 Agent Island 自动续跑指定会话";
+"No triggers yet — add one below." = "还没有规则，在下面加一条";
+"New trigger" = "新建续跑规则";
+"Message" = "消息";
+"When" = "时机";
+"After reset" = "额度重置后";
+"Every Nh" = "每 N 小时";
+"Add & enable" = "添加规则";
+"Rescan" = "重新扫描";
+"Run" = "运行";
+"Run now" = "立即运行";
+"Open" = "打开";
+"Scanning…" = "扫描中…";
+"Delete trigger" = "删除规则";
+"after reset" = "额度重置后";
+"every %dh" = "每 %d 小时";
+"fired %@" = "上次 %@";
+"%@ resets %@" = "%@ 将于 %@ 重置";
+"%@: reset time loads with usage data." = "%@：重置时间随用量数据一起加载";
+"Tool" = "服务";
+"Thread" = "要续跑的会话";
+"No active threads" = "没有可续跑的会话";
+
+/* Auto-trigger island page (4th page) */
+"Auto-trigger" = "自动续跑";
+"Manage" = "管理";
+"No triggers yet." = "还没有规则";
+"Add a trigger" = "新建规则";
+
+/* Status guide (legend) */
+"Working" = "正在跑";
+"The logo rotates while a session is running." = "会话运行时，图标会持续旋转";
+"Your turn" = "该你回复";
+"A thread finished — Agent Island opens an alarm window so you can reply." = "会话已经结束时，Agent Island 会像闹钟一样弹出来提醒你回复";
+
+/* Status guide tab */
+"Status" = "状态说明";
+"Logo states" = "图标状态";
+"Sound" = "声音";
+"What the island's two logos are telling you." = "顶部条里的两个图标在告诉你什么";
+"Safety" = "执行安全";
+"Auto-resume kill switch" = "自动续跑总开关";
+"When off, Agent Island will never spawn Claude or Codex resume commands." = "关闭后，Agent Island 不会启动任何 Claude 或 Codex 续跑命令";
+"Records" = "运行日志";
+"Open the folder with blocked and executed auto-resume records." = "打开日志文件夹，查看被拦截或已执行的续跑操作";
+"Allow resume" = "允许续跑";
+"Disallow resume" = "取消允许";
+"resume allowed" = "已允许自动续跑";
+"resume not allowed" = "未允许自动续跑";
+"Command unavailable" = "命令不可用";
+"Continue" = "继续";
+"running" = "正在跑";
+"your turn" = "该你回复";
+"stalled" = "暂停";
+"auth required" = "需要登录";
+"login timed out" = "登录超时";
+"Sign-in didn't finish — %@ — try again" = "登录未完成 — %@ — 请重试";
+"auth required — run claude" = "需要登录 — 请重新认证";
+"token refresh failed — sign in again" = "登录续期失败 — 请重新认证";
+"sign in again — run grok login" = "需要重新登录 — 运行 grok login";
+"Needs attention" = "需要处理";
+"Limits, login, network, or provider errors make the logo pulse red." = "额度、登录、网络或服务异常时，图标会变红并放大提示";
+"rate limited" = "查询暂停";
+"Reminders" = "提醒";
+"Turn alarm" = "轮到你弹窗";
+"Pop up a foreground alarm and system notification when a background run needs you." = "后台会话轮到你回复时，弹出前台提醒窗口并发送系统通知";
+"Show thread details" = "显示会话详情";
+"Show session and project names in alarms and notifications." = "在提醒和通知里显示会话名、项目名";
+"Alarm sound" = "弹窗声音";
+"Choose a built-in sound or use your own file." = "选择提示音，也可以使用自己的音频文件";
+"Volume" = "音量";
+"Adjust how loud the alarm sound is." = "调节提示音音量";
+"Basso" = "低音";
+"Blow" = "吹气";
+"Bottle" = "瓶子";
+"Frog" = "青蛙";
+"Funk" = "放克";
+"Glass" = "玻璃";
+"Hero" = "英雄";
+"Morse" = "摩斯";
+"Ping" = "提示";
+"Pop" = "弹跳";
+"Purr" = "呼噜";
+"Sosumi" = "Sosumi";
+"Submarine" = "潜水艇";
+"Tink" = "叮";
+"Custom sound" = "自定义声音";
+"Choose" = "选择";
+"Change" = "更换";
+"Demo — force a state on the notch" = "演示 — 强制顶部条状态";
+"Auth" = "登录";
+"Rate" = "查询暂停";
+"%@ is waiting for you" = "%@ 正在等你回复";
+"A background coding session finished a turn. It is your turn." = "后台编码会话已经完成这一轮，现在该你回复";
+"A background coding session finished a turn: %@." = "后台编码会话已经完成这一轮：%@";
+"Demo thread" = "演示会话";
+"It's your turn" = "现在到你了";
+"%@ is waiting" = "%@ 正在等你";
+"The thread finished. Come back and reply." = "会话已结束，请回来回复";
+"Open thread" = "回去处理";
+"I know" = "我知道了";
+"Out of quota" = "额度用完了";
+"5-hour limit" = "5 小时额度";
+"Weekly limit" = "周额度";
+"You're rate-limited for now." = "暂时被限流";
+"~%dh" = "约 %d 小时后";
+"~%dm" = "约 %d 分钟后";
+"Resets at %@ (%@)" = "%@ 恢复（%@）";
+"%@ %@ reached" = "%@ %@ 已用满";
+"You're out until it resets at %@." = "已用满，%@ 才恢复";
+"Alarm on subagent threads" = "子线程也弹窗";
+"Also alarm when a Codex subagent (child) thread finishes. Off by default — those finish constantly." = "Codex 子线程(subagent)结束时也弹窗提醒。默认关——这类线程结束得非常频繁";
+"Alarm provider" = "提供商";
+"Alarm thread" = "会话";
+"Alarm project" = "项目";
+"Unknown" = "未知";
+"Claude: %@" = "Claude：%@";
+"Codex: %@" = "Codex：%@";
+"Refresh usage" = "刷新用量";
+"Open Settings" = "打开设置";
+"Quit Agent Island" = "退出 Agent Island";
+
+/* 1.5.3 quota display mode + Claude clipboard assist */
+"Show remaining instead of used" = "显示剩余而不是已用";
+"Percent readouts count down what's left of each window rather than up what's spent." = "百分比倒着数每个窗口还剩多少，而不是正着数用了多少";
+"Session name copied" = "会话名已复制";
+"Paste it in Claude's search to jump to “%@”." = "在 Claude 的搜索里粘贴，即可找到「%@」";
+
+/* 1.5.4 Mission Control hide */
+"Mission Control" = "调度中心";
+"Hide in Mission Control" = "在调度中心里隐藏";
+"On external displays the Spaces bar hugs the top edge and the island can cover it. Hiding also makes the island ride space-switch animations." = "外接显示器没有刘海，空间栏贴着顶边，岛可能会挡住它。开启后，切换空间的动画里岛也会跟着滑动";
+
+/* 1.5.5 quota display segmented */
+"Quota shows" = "额度显示";
+"Used" = "已用";
+"Remaining" = "剩余";
+"Usage tiles and top-bar percentages follow this." = "用量图和顶栏百分比都跟随这里";
+
+/* 1.5.6 Claude jump preference */
+"CLI resume lands on the exact conversation in a terminal; the Desktop app can't jump to a specific chat until Anthropic unlocks its deep link." = "CLI 恢复会在终端里精确续上那条对话；桌面应用要等 Anthropic 开放深链后才能直达具体会话";
+
+/* 1.5.6 per-provider jump rows */
+"CLI resume lands on the exact conversation in a terminal; the Desktop app waits on Anthropic's deep link." = "CLI 恢复会在终端里精确续上那条对话；桌面应用要等 Anthropic 开放深链";
+"The desktop app jumps straight to the exact thread; CLI resume reopens it in a terminal instead." = "桌面应用直达具体线程；CLI 恢复则改在终端里重开";
+
+/* 1.5.6 copy cleanup */
+"Subagent alarms" = "子线程弹窗";
+"Input, output, and cache." = "统计输入、输出和缓存";
+"Input and output only." = "只统计输入和输出";
+
+"Notch width for MacBooks with a camera notch; narrower for those without." = "有刘海的 MacBook 用刘海宽度，没有的更窄";
+"Codex spawns child threads that finish constantly. Off by default." = "Codex 会派生子线程，它们结束得非常频繁。默认关";
+
+/* quota alarm toggle */
+"Out-of-quota alarm" = "额度用完弹窗";
+
+/* visual mode + glow color (settings) */
+"Visual mode" = "视觉模式";
+"Glow color" = "光效颜色";
+"Teal" = "青";
+"Cobalt" = "钴蓝";
+"Violet" = "紫";
+"Silver" = "银白";
+
+/* report card v3 rank block */
+
+/* update nudge */
+"Update available" = "有新版本";
+"Agent Island %@ is out — you're on %@" = "Agent Island %@ 已发布，当前是 %@";
+"Update" = "去更新";
+"You're up to date" = "已是最新版本";
+"Couldn't check for updates" = "检查更新失败，稍后再试";
+
+"Codex official · that day %@" = "Codex 官方当日 %@";
+"Codex official · lifetime %@" = "Codex 官方累计 %@";
+
+/* Grok weekly quota (1.8.1) */
+"Grok" = "Grok";
+"Weekly Grok limit" = "Grok 周额度";
+"sign in again — run grok login" = "登录已失效，运行 grok login 重新登录";
+"$%@ / $%@ monthly" = "本月 $%@ / $%@";
+"Not detected — sign in with the grok CLI" = "未检测到 grok CLI 登录";
+"week %d%%" = "本周 %d%%";
+
+/* Gemini quota (1.8.1) */
+"Gemini" = "Gemini";
+"sign in again — run gemini" = "登录已失效，运行 gemini 重新登录";
+"needs a local gemini-cli install" = "需要本机安装 gemini-cli";
+"personal accounts moved to Antigravity — support coming in a later version" = "个人账号已迁往 Antigravity，后续版本支持";
+"this sign-in method isn't supported yet" = "暂不支持该认证方式";
+"Not detected — sign in with the gemini CLI" = "未检测到 gemini CLI 登录";
+"pro %d%%" = "Pro %d%%";
+"flash %d%%" = "Flash %d%%";
+
+/* #9 frontmost chime */
+"Frontmost chime" = "前台提示音";
+"Chime instead of staying silent when the session's app is frontmost" = "会话所属应用在前台不弹窗时，改以提示音提醒";
+"Pick at most two — turn one off first" = "最多同时显示两个，先关一个再开";
+"Not available — %@ authentication isn't supported yet" = "不可用 — 暂不支持 %@ 认证方式";
+"Pro" = "Pro";
+"Open %@ usage" = "打开 %@ 用量";
+"Open Gemini quota details" = "打开 Gemini 额度详情";
+"Gemini quota by model" = "Gemini 各模型额度";
+"Click to open official quota documentation" = "点击打开官方额度文档";
+"Gemini quota" = "Gemini 额度";
+"Gemini Pro quota" = "Gemini Pro 额度";
+"%@: %d percent used" = "%@：已使用 %d%%";
+"Grok weekly usage by product" = "Grok 各产品周用量";
+"Open Grok usage" = "打开 Grok 用量";
+"Weekly pool: %d%%" = "周额度池：%d%%";
+"Click to open Grok" = "点击打开 Grok";
+"cycle" = "账期";
+"cycle %d%%" = "账期 %d%%";
+"sign in again — open Cursor" = "需要重新登录 — 打开 Cursor";
+"Not detected — sign in inside Cursor" = "未检测到 — 请在 Cursor 里登录";
+"Cursor included usage" = "Cursor 套餐用量";
+"%@: %d percent of billing period used" = "%@：本账期已使用 %d%%";
+"Cursor included usage this billing period" = "Cursor 本账期套餐用量";
+"Included pool: %d%%" = "套餐额度：%d%%";
+"Click to open Cursor dashboard" = "点击打开 Cursor 面板";
+"Open Cursor dashboard" = "打开 Cursor 面板";
+"Four providers, a lighter background, truer alarms, and reports that look back" = "四个服务 · 更省的后台 · 更准的提醒 · 能回看的报告";
+"Four providers, two slots" = "四个服务，两个槽位";
+"Pick one or two of Claude, Codex, Gemini, and Grok. Gemini and Grok add quota badges, hover detail, and one-click access to their official pages" = "可从 Claude、Codex、Antigravity、Grok 中选一个或两个；Gemini 与 Grok 提供额度徽标、悬停明细与官方页面入口";
+"Live status and quota, together" = "实时状态与额度，一个小岛看全";
+"Five agents on one island — each read from the records it already writes on your Mac" = "五家 Agent 同在一座岛——各自读它们本来就写在你 Mac 上的记录";
+"A guided tour of everything the island does" = "带你看懂小岛的全部能力";
+"Claude and Codex carry live session state: spinning means working, a bell means it's your turn, and steady red means it needs you" = "Claude 与 Codex 提供实时会话状态：旋转代表工作中，铃铛代表轮到你，常红代表需要处理";
+"All five agents carry live session state — Claude, Codex, Grok, Antigravity, and Cursor. Spinning means working, a bell means it's your turn, and steady red means it needs you" = "Claude、Codex、Grok、Antigravity、Cursor 五家全部显示实时状态：\n旋转表示工作中，铃铛表示轮到你，常红表示需要处理";
+"Reports that look back" = "能回看的报告";
+"Use the arrows to revisit earlier weekly or monthly cards — each page is rebuilt from that exact local window, with every model that ran" = "用箭头翻回更早的周报或月报；每一页都按对应的本地时间窗口重新计算，并列出跑过的全部模型";
+"April" = "4月";
+"Claude, Codex, Antigravity, Grok, and Cursor — pick any two for the top bar. Hover any row for model or product detail, click through to the official page" = "Claude、Codex、Antigravity、Grok、Cursor 任选两家常驻顶部；\n悬停服务行查看模型或产品明细，点击打开官方页面";
+
+/* What's New (1.7.2) */
+"What's new in this update" = "本次更新带来了什么";
+"Get started" = "开始使用";
+"Codex accounting v3" = "Codex 记账 v3";
+"The local ledger now drops fork phantom tokens — single-machine days land within about 2% of the official client" = "本机账本挤掉了 fork 幻影 token，纯本机使用日与官方客户端误差约 2% 以内";
+"Official figures, side by side" = "官方数字，并排可见";
+"The usage calendar shows the Codex client's own lifetime and daily numbers — account-wide, every device" = "用量日历新增 Codex 官方的累计与逐日数字——账号级，含所有设备";
+"Token metric toggle works everywhere" = "口径开关全局生效";
+"All tokens vs Input + output now drives the calendar and both report cards" = "全部 Token / 只统计输入输出，现在真正作用于日历与周月报卡";
+"Steadier weekly card" = "周报卡更稳了";
+"Every number on the card comes from one scan window, and opening the report refreshes it live" = "卡上所有数字来自同一扫描窗口，打开报告即实时刷新";
+"Cleaner defaults" = "更清爽的默认";
+"Usage display on by default, stepped chart as the default look, sparkline retired, cost section tidied" = "用量显示默认开启，图表默认阶梯样式，折线图退役，成本区更整洁";
+
+/* 1.7.2 preview batch 2 */
+"Pie" = "饼图";
+"Guide" = "指南";
+"Release notes" = "版本说明";
+"What's new in this version" = "本版更新说明";
+"View" = "查看";
+"Show highlights after updates" = "更新后自动展示新功能";
+"A one-time card after each update, so new features never land silently." = "每次更新后弹一次本版亮点，新功能不再无声上线";
+"Full changelog on the website" = "官网完整更新日志";
+"Calm: no ambient light, the lowest GPU and CPU cost" = "清爽：无环境光效，GPU/CPU 占用最低";
+"Vivid: halo and orbit sweep, a touch more GPU" = "流光：光晕与流光扫过，GPU 占用略高";
+"Connected to Claude" = "已连接 Claude";
+"Login incomplete" = "登录未完成";
+"Authentication succeeded — close this page and return to Agent Island" = "认证成功，可以关闭此页并返回 Agent Island";
+"Please return to Agent Island and try again" = "请回到 Agent Island 重试";
+
+/* 1.7.2 paged cards */
+"What's new in this update" = "本次更新带来了什么";
+"How Agent Island works" = "Agent Island 使用指南";
+"Product guide" = "产品指南";
+"A five-page tour of everything the island does." = "五页看懂小岛的全部能力";
+"Back" = "上一页";
+"Next" = "下一页";
+"This update, in one line" = "这次更新，一句话";
+"Truer numbers, a calmer interface, and updates that explain themselves" = "数字更准了 · 界面更清爽了 · 更新不再无声";
+"Numbers you can defend" = "经得起对账的数字";
+"The accounting engine drops phantom tokens — this machine now lands within ~2% of the official Codex client, and the calendar shows the official figure beside ours" = "记账引擎挤掉幻影 token，本机数字与 Codex 官方客户端误差约 2%；日历里还能同屏看到官方数字";
+"A calmer interface" = "更清爽的界面";
+"Solid pie charts, stepped bars by default, a centered solo layout, and each visual mode explained right where you pick it" = "实心饼图、默认阶梯样式、单订阅居中布局，视觉模式在选择处就有说明";
+"Updates that explain themselves" = "更新自己会说话";
+"Every release opens one card like this — once. Turn it off in Settings, reopen it any time from the version pill" = "每个版本只弹一次这样的说明卡；设置里可关，点版本号随时重看";
+"The island watches your agents" = "小岛替你盯着 agent";
+"Two marks in the notch: spinning means working, a bell means it's your turn, steady red means it needs you" = "刘海里两个标志：旋转=在干活，铃铛=轮到你，常红=需要你处理";
+"Quota at a glance" = "额度一眼可见";
+"Expand the island for the 5-hour and weekly windows — percentages come straight from each provider's official endpoint" = "展开小岛看 5 小时与周额度窗口，百分比直连官方接口";
+"Usage, cost, and a year of history" = "用量、成本与全年历史";
+"Local session logs become token counts, API value, and the year heatmap — nothing leaves your machine" = "本机会话日志变成 token 统计、API 价值与全年热力图，数据不出你的电脑";
+"Weekly and monthly cards" = "周报与月报战绩卡";
+"One click renders a shareable battle card — copy it or AirDrop it straight to your phone, and the arrows flip back to any past week or month" = "一键生成可分享的战报卡,复制或隔空投送到手机;箭头能翻回任意一周或一月";
+"Make it yours" = "把它调成你的样子";
+"Visual modes, glow colors, chart styles, language — and how alarms behave while you're in the session's app — all in Settings" = "视觉模式、光晕、图表、语言和前台提醒，都在设置里";
+
+/* guide v2 titles */
+"Monitor" = "监视器";
+"Cost & history" = "成本与历史";
+"Report cards" = "战绩卡";
+"Personalization" = "个性化";
+"Expand the island for the 5-hour and weekly windows, straight from each provider's official endpoint — plus Grok's weekly pool when its CLI is signed in. Subscribed to just one tool? Its gauges take the whole island" = "展开岛屿即见 5 小时与周窗口,数字直接来自各家官方端点;登录过 grok CLI 还会多一条它的周额度;只订阅一家,它的仪表盘独占整岛";
+
+/* guide v2 titles */
+"Monitor" = "监视器";
+"Cost & history" = "成本与历史";
+"Report cards" = "战绩卡";
+"Personalization" = "个性化";
+"Expand the island for the 5-hour and weekly windows, straight from each provider's official endpoint. Subscribed to just one tool? Its gauges take the whole island" = "展开小岛，看 5 小时与周额度窗口，数字直连官方接口。只订阅了一个工具？它的仪表会独占整座小岛";
+
+/* whatsnew structural titles */
+"At a glance" = "更新速览";
+"Truer numbers" = "更准的数字";
+"Clearer update guidance" = "更清晰的更新引导";
+"Truer numbers, a calmer interface, clearer update guidance" = "更准的数字 · 更清爽的界面 · 更清晰的引导";
+"A lighter background, truer alarms, reports that look back, and Grok aboard" = "更省的后台 · 更准的弹窗 · 能回看的报告 · Grok 上岛";
+"A lighter background" = "更省的后台";
+"Huge transcript libraries no longer pin the CPU — scans skip cold files and reuse the index, dropping a reported 300%+ to single digits" = "大转录库不再拖住 CPU——扫描跳过冷文件、复用索引,社区实测占用从 300%+ 降到个位数";
+"Truer alarms" = "更准的弹窗";
+"A turn you watched finish counts as seen — no more stale popups after you switch apps. Desktop hosts stay quiet while frontmost, with an optional chime" = "看着结束的轮次就算已读,切走后不再补弹旧窗;宿主 App 在前台时保持安静,可选一声提示音";
+"Reports that look back" = "能回看的报告";
+"Flip the weekly and monthly cards to any past week or month with the arrows — and cost estimates ride the new GPT-5.6 prices" = "用箭头把周报月报翻回任意一周或一月,成本估算同步 GPT-5.6 新价";
+"Sign-in that lands right" = "落对账号的登录";
+"Copy the Claude login link into whichever browser profile holds your account; auth errors now say what actually failed" = "把 Claude 登录链接复制到装着你账号的浏览器 profile 打开,认证报错会说清真正原因";
+"Grok on the island" = "Grok 上岛";
+"Signed into the grok CLI? The usage page gains its weekly pool and monthly spend — automatic, and silent when absent" = "登录过 grok CLI,用量页就会多出周额度与月度花费;没装则完全不出现";
+"Every release opens one card like this — once. Reopen it any time from the version pill in Settings" = "每个版本自动展示一次；设置里点版本号可随时重看";
+
+/* About tab */
+"About" = "关于";
+"Anyone who works beside an agent has stared at the same screen: it is running, you are waiting — or it stopped, and nobody told you" = "每个和 agent 并肩干活的人都盯过同一块屏幕：它在跑，你在等；或者它停了，却没人告诉你";
+"Agent Island turns that into an island in your notch — who is working, whose turn it is, how much you have used. One glance, then go back to your life" = "Agent Island 把这件事变成刘海里的一座小岛——谁在干活、轮到谁了、用了多少，一眼看完，回去过你的生活";
+"Everything stays on your machine. No account, no telemetry, open source" = "所有数据都留在你的电脑上。没有账号，没有遥测，代码开源";
+"Made by" = "作者";
+"License" = "许可证";
+"Website" = "官网";
+"Grew out of codex-island by Eric Park — the credit stays" = "项目源自 Eric Park 的 codex-island，致谢永久保留";
+"Copy" = "拷贝";
+"Save" = "保存";
+"Saved as PNG" = "已保存为 PNG";
+
+/* About v2 + misc */
+"Notes" = "版本说明";
+"Sponsor" = "赞助";
+"Buy me a coffee" = "请我喝一杯";
+"This product exists for one thing: efficiency. I am tired, I am working — the agent runs, and I wait. That time should not be wasted" = "做这个产品的初心只有一件事：效率。我很困、我在干活，agent 在跑、我在等——这段时间不该被浪费";
+"It is open source so that every developer — everyone vibe coding — can claim that efficiency too. That is the whole origin" = "开源它，是想让每个开发者、每个在 vibe coding 的人，都把这份效率拿回去。这就是全部的原点";
+"If you like it, share it, or leave a star on GitHub — that is the biggest help you can give me" = "如果你喜欢它，发到社交媒体，或者在 GitHub 点一颗 star，这就是对我最大的帮助";
+
+"Welcome back to Agent Island" = "欢迎继续使用 Agent Island";
+"start Antigravity to read quota" = "启动 Antigravity 后可读取配额";
+"Installed — run agy to sign in" = "已安装 — 运行 agy 登录";
+"Not detected — sign in with the antigravity CLI" = "未检测到 — 用 antigravity CLI 登录";
+"sessions monitored — quota reading not wired yet" = "会话已监控 — 配额读取尚未接通";
+"The fifth seat changes hands: Antigravity replaces Gemini — Google's gradient, a real weekly quota, resume to the exact conversation — and every alarm now lands back in the terminal you actually use" = "第五席易主：Antigravity 接替 Gemini——谷歌渐变、真实周额度、精确续跑；\n每个弹窗都能跳回你正在用的那个终端";
+"Antigravity arrives" = "Antigravity 登岛";
+"Google retired Gemini Code Assist for individuals, so Antigravity takes the slot: live session state, weekly quota read from its own local service, and one click back to the exact conversation" = "Google 关停个人版 Gemini Code Assist，Antigravity 顶上：\n实时会话状态、本地服务直读周额度、一键回到原对话";
+"Back to your terminal" = "回到你的终端";
+"An alarm click lands in the session's live window — Terminal, Ghostty, iTerm, or an IDE pane. Fresh windows open in the terminal you actually use, learned by watching rather than by asking" = "点弹窗直达会话所在的窗口——Terminal、Ghostty、iTerm 或 IDE 面板；\n需要新开时，也开在你惯用的终端里，靠观测学会，无需设置";
+"Apple alarm tones" = "苹果闹钟铃声";
+"Radar, Beacon, Slow Rise — the alarm rings with Apple's own tones, played straight from the system's ringtone library. Radar is the new default" = "Radar、Beacon、Slow Rise——弹窗铃声来自系统自带的苹果铃声库，默认 Radar";
+"Cost across all five" = "五家成本全覆盖";
+"Grok reports its own dollars, Cursor counts its tokens — cost and reports now cover every agent, read locally, and say so honestly where a provider publishes less" = "Grok 自报美元、Cursor 提供 token 计数——成本与报表覆盖五家，全部本地读取；\n上游没有的数据，如实标注";

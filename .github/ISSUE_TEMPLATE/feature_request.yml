@@ -1,0 +1,44 @@
+name: Feature request
+description: Suggest a useful Agent Island improvement.
+title: "[Feature]: "
+labels: ["enhancement"]
+
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem should this solve?
+      placeholder: I miss completed Claude or Codex notifications when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      placeholder: Agent Island should...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Turn alarms
+        - Live status
+        - Usage and limits
+        - Report cards and ranks
+        - Non-notched Mac layout
+        - Windows app
+        - Install and updates
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Extra context
+      description: |
+        Include any links, screenshots, or examples from your macOS or Windows workflow that help explain the request.

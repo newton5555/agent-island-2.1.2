@@ -1,0 +1,54 @@
+name: Windows Release
+
+# The tag trigger was parked for 2.1.1 (macOS-first: the WPF tree had not
+# absorbed that feature set, so a tag-built zip would have shipped old
+# features under a new number). 2.1.2 closes the gap — same five providers,
+# same live session state, same reports — so ONE tag ships both platforms
+# again. The attach step still waits for the macOS job's release, which is
+# what carries the Sparkle appcast.
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to attach the Windows zip to"
+        required: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Build (version = VERSION file)
+        shell: pwsh
+        working-directory: windows
+        run: |
+          $v = (Get-Content ..\VERSION -Raw).Trim()
+          .\build.ps1 -Version $v
+
+      # The macOS job creates the release (with the Sparkle appcast). Wait for
+      # it so a Windows-only release can never occupy `latest` without the
+      # appcast — that would 404 every Mac user's auto-update.
+      - name: Attach zip once the release exists
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          for i in $(seq 1 30); do
+            gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 && break
+            sleep 20
+          done
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null
+          gh release upload "$TAG" windows/dist/AgentIsland-*.zip --clobber -R "$GITHUB_REPOSITORY"
