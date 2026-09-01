@@ -143,6 +143,7 @@ public sealed class ChartStylePickerControl : Grid
                     Height = 15,
                     Stroke = IslandColors.Brush(IslandColors.White(0.10)),
                     StrokeThickness = 1.6,
+                    Visibility = Visibility.Collapsed,
                 };
                 Canvas.SetLeft(innerTrack, innerOffset);
                 Canvas.SetTop(innerTrack, innerOffset);
@@ -151,7 +152,7 @@ public sealed class ChartStylePickerControl : Grid
                 var innerArc = new System.Windows.Shapes.Path
                 {
                     Data = Charts.RingMeter.ArcGeometry(center, (15 - 1.6) / 2, 0.70 * 359.9),
-                    Stroke = IslandColors.Brush(IslandColors.White(0.60)),
+                    Stroke = IslandColors.Brush(IslandColors.LiveTeal),
                     StrokeThickness = 1.6,
                     StrokeStartLineCap = PenLineCap.Round,
                     StrokeEndLineCap = PenLineCap.Round,

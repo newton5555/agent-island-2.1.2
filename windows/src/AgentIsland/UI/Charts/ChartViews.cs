@@ -297,32 +297,33 @@ public sealed class RingMeter : Grid
         Canvas.SetTop(_progress, 0);
         host.Children.Add(_progress);
 
-        // 3. Inner Track (Background ring for reset countdown)
+        // 3. Inner Track (Background ring for reset countdown - hidden for clean green arc)
         var innerOffset = (Diameter - InnerDiameter) / 2;
         _innerTrack = new System.Windows.Shapes.Ellipse
         {
             Width = InnerDiameter,
             Height = InnerDiameter,
-            Stroke = IslandColors.Brush(IslandColors.White(0.06)),
+            Stroke = IslandColors.Brush(IslandColors.White(0.04)),
             StrokeThickness = InnerStroke,
+            Visibility = Visibility.Collapsed,
         };
         Canvas.SetLeft(_innerTrack, innerOffset);
         Canvas.SetTop(_innerTrack, innerOffset);
         host.Children.Add(_innerTrack);
 
-        // 4. Inner Progress Arc (Reset time progress)
+        // 4. Inner Progress Arc (Remaining time in glowing green)
         _resetProgress = new System.Windows.Shapes.Path
         {
-            Stroke = IslandColors.Brush(IslandColors.White(0.65)),
+            Stroke = IslandColors.Brush(IslandColors.LiveTeal),
             StrokeThickness = InnerStroke,
             StrokeStartLineCap = PenLineCap.Round,
             StrokeEndLineCap = PenLineCap.Round,
             Effect = new System.Windows.Media.Effects.DropShadowEffect
             {
                 ShadowDepth = 0,
-                BlurRadius = 3,
-                Color = Colors.White,
-                Opacity = 0.35,
+                BlurRadius = 4,
+                Color = IslandColors.LiveTeal,
+                Opacity = 0.45,
             },
         };
         Canvas.SetLeft(_resetProgress, 0);
@@ -382,19 +383,19 @@ public sealed class RingMeter : Grid
         };
         BeginAnimation(SweepProperty, sweep);
 
-        double resetRatio = 0;
+        double remainingRatio = 0;
         if (window is { ResetAt: { } resetAt } && resetAt > DateTimeOffset.Now)
         {
             double periodSeconds = window.PeriodSeconds is { } p && p > 0
                 ? p
                 : (window.IsLongPeriod ? 7 * 86400 : 5 * 3600);
             var remainingSeconds = (resetAt - DateTimeOffset.Now).TotalSeconds;
-            // Progress towards reset: 0% at cycle start, 100% when reset time arrives
-            resetRatio = Math.Clamp(1.0 - (remainingSeconds / periodSeconds), 0.03, 1.0);
+            // Remaining time ratio: 100% when full window remaining, shrinks as reset approaches
+            remainingRatio = Math.Clamp(remainingSeconds / periodSeconds, 0.02, 1.0);
         }
 
         var innerSweep = new DoubleAnimation(
-            resetRatio * 359.9,
+            remainingRatio * 359.9,
             IslandAnimations.StrongEaseOutDuration)
         {
             EasingFunction = IslandAnimations.StrongEaseOut(),
