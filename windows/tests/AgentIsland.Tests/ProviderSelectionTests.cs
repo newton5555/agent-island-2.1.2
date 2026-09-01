@@ -21,6 +21,8 @@ public static class ProviderSelectionTests
             ("third pick is refused, nothing evicted", TestThirdPickRefused),
             ("toggle off at the cap always succeeds", TestToggleOffAtCap),
             ("migration carries the pre-slot pair over", TestMigration),
+            ("all five agents parse and roundtrip correctly", TestAllFiveAgentsRoundtrip),
+            ("custom provider pairings sanitize and persist correctly", TestCustomProviderPairings),
         };
         foreach (var (name, test) in tests)
         {
@@ -110,5 +112,34 @@ public static class ProviderSelectionTests
             "a Codex-only island must migrate unchanged");
         Expect(ProviderSelection.Migrated(false, false).Count == 0,
             "an empty pre-slot island must migrate to an empty selection");
+    }
+
+    private static void TestAllFiveAgentsRoundtrip()
+    {
+        var all = new[]
+        {
+            DisplayProvider.Claude,
+            DisplayProvider.Codex,
+            DisplayProvider.Antigravity,
+            DisplayProvider.Grok,
+            DisplayProvider.Cursor,
+        };
+        foreach (var p in all)
+        {
+            var raw = p.RawValue();
+            var parsed = DisplayProviders.Parse(raw);
+            Expect(parsed == p, $"Failed roundtrip for {p}: raw={raw}, parsed={parsed}");
+        }
+        Expect(DisplayProviders.Parse("gemini") == DisplayProvider.Antigravity, "gemini legacy name must resolve to antigravity");
+    }
+
+    private static void TestCustomProviderPairings()
+    {
+        var order = ProviderSelection.SanitizeOrder(new[] { "antigravity", "codex", "grok", "cursor", "claude" });
+        var enabled = ProviderSelection.SanitizeEnabled(new[] { "antigravity", "codex" }, order);
+        Expect(Spell(enabled) == "antigravity,codex", $"Antigravity + Codex pairing failed: {Spell(enabled)}");
+
+        var grokCursor = ProviderSelection.SanitizeEnabled(new[] { "cursor", "grok" }, order);
+        Expect(Spell(grokCursor) == "grok,cursor", $"Grok + Cursor pairing failed: {Spell(grokCursor)}");
     }
 }

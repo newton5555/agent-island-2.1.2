@@ -56,6 +56,16 @@ public static class Preferences
         }
     }
 
+    public static void SetBatch(Action<Dictionary<string, JsonElement>> update)
+    {
+        lock (Gate)
+        {
+            _values = LoadFromDisk();
+            update(_values);
+            Save();
+        }
+    }
+
     public static void Remove(string key)
     {
         lock (Gate)
@@ -126,13 +136,30 @@ public static class Preferences
             var path = IslandPaths.SettingsFile;
             tmp = path + ".tmp-" + Guid.NewGuid().ToString("N");
             File.WriteAllText(tmp, JsonSerializer.Serialize(_values, SerializerOptions));
-            File.Move(tmp, path, overwrite: true);
+            var moved = false;
+            for (var attempt = 0; attempt < 5; attempt++)
+            {
+                try
+                {
+                    File.Move(tmp, path, overwrite: true);
+                    moved = true;
+                    break;
+                }
+                catch (IOException)
+                {
+                    Thread.Sleep(20);
+                }
+            }
+            if (!moved)
+            {
+                File.Move(tmp, path, overwrite: true);
+            }
         }
         catch
         {
             // A failed save costs one preference write, not the app — but the
             // temp copy must not be left behind, since nothing else sweeps it.
-            try { if (tmp.Length > 0) File.Delete(tmp); } catch { }
+            try { if (tmp.Length > 0 && File.Exists(tmp)) File.Delete(tmp); } catch { }
         }
     }
 }

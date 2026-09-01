@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.IO;
+using System.Text.Json;
 using AgentIsland.Core;
 using AgentIsland.Usage;
 
@@ -293,12 +294,13 @@ public sealed class ProviderVisibilityStore : INotifyPropertyChanged
     private void Persist()
     {
         if (AppEnvironment.IsDemo) return;
-        Preferences.Set(OrderKey, _order.Select(provider => provider.RawValue()).ToList());
-        Preferences.Set(EnabledKey, _enabled.Select(provider => provider.RawValue()).ToList());
-        // Keep the pre-slot keys in step. They are what an older build reads,
-        // and the updater can roll one back onto the same settings file.
-        Preferences.Set(ClaudeKey, _enabled.Contains(DisplayProvider.Claude));
-        Preferences.Set(CodexKey, _enabled.Contains(DisplayProvider.Codex));
+        Preferences.SetBatch(values =>
+        {
+            values[OrderKey] = JsonSerializer.SerializeToElement(_order.Select(p => p.RawValue()).ToList());
+            values[EnabledKey] = JsonSerializer.SerializeToElement(_enabled.Select(p => p.RawValue()).ToList());
+            values[ClaudeKey] = JsonSerializer.SerializeToElement(_enabled.Contains(DisplayProvider.Claude));
+            values[CodexKey] = JsonSerializer.SerializeToElement(_enabled.Contains(DisplayProvider.Codex));
+        });
     }
 
     private void RaiseAll()
