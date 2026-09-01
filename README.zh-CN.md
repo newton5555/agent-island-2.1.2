@@ -304,6 +304,10 @@ Agent Island 会读取实现这些页面所需的本地文件和凭据。与其�
 - [路线图](docs/roadmap.md)
 - [开放 Issues](https://github.com/tristan666666/agent-island/issues)
 
+## Fork 来源
+
+本仓库是基于 **Agent Island v2.1.2** 的非官方开发 fork。上游项目原发布于 [tristan666666/agent-island](https://github.com/tristan666666/agent-island)；本源码快照来自 Fossies 归档，当时上游仓库已无法访问。本仓库保留上游版权声明和 MIT 许可证。
+
 ## 致谢与许可证
 
 Agent Island fork 自 **Eric Park** 的 **[codex-island](https://github.com/ericjypark/codex-island)**。原项目奠定了用量岛与成本跟踪基础；Agent Island 在此之上加入实时会话状态、轮到你提醒、跨平台支持和独立的产品方向。

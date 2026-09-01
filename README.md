@@ -305,6 +305,10 @@ Run `./scripts/verify.sh` before opening a macOS pull request. Windows changes a
 - [Roadmap](docs/roadmap.md)
 - [Open issues](https://github.com/tristan666666/agent-island/issues)
 
+## Fork provenance
+
+This repository is an unofficial development fork based on **Agent Island v2.1.2**, originally published at [tristan666666/agent-island](https://github.com/tristan666666/agent-island). This source snapshot was obtained from the Fossies archive after the upstream repository became unavailable. The upstream copyright and MIT license notice are retained.
+
 ## Credits and license
 
 Agent Island is a fork of **[codex-island](https://github.com/ericjypark/codex-island)** by **Eric Park**. The original usage-island and cost-tracking foundation are his work. Agent Island adds live session-state views, your-turn alerts, cross-platform support, and its own product direction.
