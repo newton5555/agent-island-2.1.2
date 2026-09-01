@@ -859,7 +859,7 @@ public static class SessionScanner
         // finished or waiting on an approval — both mean "your turn". The
         // quiet threshold sits well above streaming gaps so a thinking
         // pause never fires it.
-        if (quietMeansDone && !turn.IsDone
+        if (quietMeansDone && !turn.IsDone && !turn.IsRunning
             && lastWorking.TryGetValue(path, out var lastActive))
         {
             var quietFor = (now - fileModified).TotalSeconds;

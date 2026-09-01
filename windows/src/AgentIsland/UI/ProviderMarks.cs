@@ -16,13 +16,13 @@ public static class ProviderMarks
 {
     private static readonly Dictionary<DisplayProvider, ImageBrush?> MaskCache = new();
     private static BitmapImage? _antigravity;
+    internal static BitmapImage? AntigravityBitmap => _antigravity ??= Load("mark-antigravity.png");
 
     public static UIElement Mark(DisplayProvider provider, double size, double tintOpacity = 0.95)
     {
         if (provider == DisplayProvider.Antigravity)
         {
-            _antigravity ??= Load("mark-antigravity.png");
-            if (_antigravity is { } bitmap)
+            if (AntigravityBitmap is { } bitmap)
             {
                 var image = new Image
                 {
@@ -115,11 +115,18 @@ public static class ProviderMarks
     {
         try
         {
-            return new BitmapImage(new Uri($"pack://application:,,,/Assets/{name}"));
+            return new BitmapImage(new Uri($"pack://application:,,,/AgentIsland;component/Assets/{name}"));
         }
         catch
         {
-            return null;
+            try
+            {
+                return new BitmapImage(new Uri($"pack://application:,,,/Assets/{name}"));
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

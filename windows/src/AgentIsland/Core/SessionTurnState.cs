@@ -3,7 +3,11 @@ using System.Text.Json;
 
 namespace AgentIsland.Core;
 
-public readonly record struct SessionTurnStatus(bool IsDone, string? Key, DateTimeOffset? ActivityDate);
+public readonly record struct SessionTurnStatus(
+    bool IsDone,
+    string? Key,
+    DateTimeOffset? ActivityDate,
+    bool IsRunning = false);
 
 /// Classifies the tail of a transcript: is the latest turn finished (the user
 /// is "up"), and which event identifies that turn. Direct port of the macOS
@@ -174,17 +178,41 @@ public static class SessionTurnState
     /// (verified on real transcripts, 2026-08-08), so "MODEL last" alone
     /// false-fires mid-run — the agent has spoken only when the last MODEL
     /// step is a PLANNER_RESPONSE with real content and no tool_calls.
-    /// `status` is a per-step marker appended on completion and carries no
-    /// turn state; the caller's quiet gap still backstops a run that ends
-    /// on a tool call.
+    /// When background tasks or tool calls are still RUNNING, a subsequent
+    /// wait/confirmation PLANNER_RESPONSE must not prematurely mark the turn
+    /// done; the turn stays Working until background work completes.
     public static SessionTurnStatus Antigravity(IReadOnlyList<string> lines)
     {
+        (string Source, string? Key, DateTimeOffset? Stamp, bool Spoke)? candidate = null;
+        var seenSteps = new HashSet<int>();
+        var hasRunningTask = false;
+
         for (var i = lines.Count - 1; i >= 0; i--)
         {
             using var doc = Jsonl.TryParseLine(lines[i]);
             if (doc is null) continue;
             var root = doc.RootElement;
             if (root.ValueKind != System.Text.Json.JsonValueKind.Object) continue;
+
+            int? stepIndex = root.TryGetProperty("step_index", out var stepProp)
+                && stepProp.TryGetInt32(out var idx)
+                ? idx
+                : null;
+            var status = Jsonl.GetString(root, "status");
+            var isRunningStep = string.Equals(status, "RUNNING", StringComparison.OrdinalIgnoreCase);
+
+            if (stepIndex is { } stepIdx)
+            {
+                if (seenSteps.Add(stepIdx) && isRunningStep)
+                {
+                    hasRunningTask = true;
+                }
+            }
+            else if (isRunningStep)
+            {
+                hasRunningTask = true;
+            }
+
             if (Jsonl.GetString(root, "source") is not { } source) continue;
 
             DateTimeOffset? stamp = null;
@@ -203,25 +231,32 @@ public static class SessionTurnState
                         : DateTimeOffset.FromUnixTimeSeconds((long)seconds);
                 }
             }
-            string? key = root.TryGetProperty("step_index", out var step)
-                && step.TryGetInt32(out var index)
-                ? "ag:" + index
-                : null;
+            string? key = stepIndex is { } index ? "ag:" + index : null;
 
-            switch (source)
+            if (candidate is null && source is "MODEL" or "USER_EXPLICIT")
             {
-                case "MODEL":
-                    var spoke = Jsonl.GetString(root, "type") == "PLANNER_RESPONSE"
-                        && !AntigravityHasToolCalls(root)
-                        && Jsonl.GetString(root, "content") is { Length: > 0 };
-                    return new SessionTurnStatus(spoke, key, stamp);
-                case "USER_EXPLICIT":
-                    return new SessionTurnStatus(false, key, stamp);
-                default:
-                    continue;
+                var spoke = source == "MODEL"
+                    && Jsonl.GetString(root, "type") == "PLANNER_RESPONSE"
+                    && !AntigravityHasToolCalls(root)
+                    && Jsonl.GetString(root, "content") is { Length: > 0 };
+                candidate = (source, key, stamp, spoke);
+            }
+
+            if (source == "USER_EXPLICIT")
+            {
+                break;
             }
         }
-        return new SessionTurnStatus(false, null, null);
+
+        if (candidate is not { } c) return new SessionTurnStatus(false, null, null);
+
+        if (c.Source == "USER_EXPLICIT")
+        {
+            return new SessionTurnStatus(false, c.Key, c.Stamp);
+        }
+
+        var isDone = c.Spoke && !hasRunningTask;
+        return new SessionTurnStatus(isDone, c.Key, c.Stamp, IsRunning: hasRunningTask);
     }
 
     private static bool AntigravityHasToolCalls(System.Text.Json.JsonElement root)

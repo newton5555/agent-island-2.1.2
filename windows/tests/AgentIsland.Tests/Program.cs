@@ -8,6 +8,7 @@ namespace AgentIsland.Tests;
 /// this machine's real session files — a diagnostic, not a test.
 public static class Program
 {
+    [STAThread]
     public static int Main(string[] args)
     {
         if (args.Length > 0 && args[0] == "scan")
@@ -91,6 +92,7 @@ public static class Program
             ScannerCwdTests.RunAll();
             CodexPayloadParsingTests.RunAll();
             AntigravityQuotaTests.RunAll();
+            ProviderLogoAnimationTests.RunAll();
             Console.WriteLine("ALL GREEN");
             return 0;
         }

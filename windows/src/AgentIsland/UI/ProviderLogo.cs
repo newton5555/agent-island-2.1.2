@@ -37,6 +37,24 @@ public sealed class ProviderLogo : Grid
     // gets clipped by the strip into a hard-edged square of tint.
     private const double BlobSize = 34;
 
+    private readonly Grid _markHost;
+
+    // Antigravity official wave flow: stationary arch mask with four-color
+    // liquid flow and caustic sweep, avoiding contour spin wobble.
+    private Grid? _antigravityContainer;
+    private Image? _antigravityStaticImage;
+    private Grid? _antigravityWaveHost;
+    private readonly RotateTransform _waveRotate = new(0, 0.5, 0.5);
+    private readonly RotateTransform _causticRotate = new(0, 0.5, 0.5);
+    private bool _isAntigravityWaveActive;
+
+    internal bool IsAntigravityWaveActive => _isAntigravityWaveActive;
+    internal bool IsSpinActive => _rotate.HasAnimatedProperties;
+    internal Visibility AntigravityWaveVisibility => _antigravityWaveHost?.Visibility ?? Visibility.Collapsed;
+    internal Visibility AntigravityStaticVisibility => _antigravityStaticImage?.Visibility ?? Visibility.Collapsed;
+    internal double CurrentAngle => _rotate.Angle;
+    internal double WaveAngle => _waveRotate.Angle;
+
     public ProviderLogo()
     {
         _glowBlob = new System.Windows.Shapes.Ellipse
@@ -74,10 +92,106 @@ public sealed class ProviderLogo : Grid
         };
         Children.Add(_glowBlob);
         Children.Add(_markHost);
+        Unloaded += (_, _) => StopAnimations();
         ApplyTool();
     }
 
-    private readonly Grid _markHost;
+    private void EnsureAntigravityElements()
+    {
+        if (_antigravityContainer is not null) return;
+        if (ProviderMarks.AntigravityBitmap is not { } bitmap) return;
+
+        _antigravityContainer = new Grid
+        {
+            Width = MarkSize,
+            Height = MarkSize,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
+        _antigravityStaticImage = new Image
+        {
+            Source = bitmap,
+            Width = MarkSize,
+            Height = MarkSize,
+            Stretch = Stretch.Uniform,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Visibility = _state == ActivityState.Working ? Visibility.Collapsed : Visibility.Visible,
+        };
+        RenderOptions.SetBitmapScalingMode(_antigravityStaticImage, BitmapScalingMode.HighQuality);
+
+        var mask = new ImageBrush(bitmap) { Stretch = Stretch.Uniform };
+        RenderOptions.SetBitmapScalingMode(mask, BitmapScalingMode.HighQuality);
+
+        _antigravityWaveHost = new Grid
+        {
+            Width = MarkSize,
+            Height = MarkSize,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            OpacityMask = mask,
+            Visibility = _state == ActivityState.Working ? Visibility.Visible : Visibility.Collapsed,
+        };
+
+        // 1. Four-color liquid wave layer (2 cycles of Google blue -> green -> yellow -> red)
+        var waveBrush = new LinearGradientBrush
+        {
+            StartPoint = new Point(0, 0),
+            EndPoint = new Point(1, 1),
+            SpreadMethod = GradientSpreadMethod.Repeat,
+            RelativeTransform = _waveRotate,
+        };
+        var colors = new[]
+        {
+            Color.FromRgb(0x42, 0x85, 0xF4), // Blue
+            Color.FromRgb(0x34, 0xA8, 0x53), // Green
+            Color.FromRgb(0xFB, 0xBC, 0x05), // Yellow
+            Color.FromRgb(0xEA, 0x43, 0x35), // Red
+        };
+        for (var cycle = 0; cycle < 2; cycle++)
+        {
+            for (var c = 0; c < 4; c++)
+            {
+                var offset = (cycle * 4 + c) / 8.0;
+                waveBrush.GradientStops.Add(new GradientStop(colors[c], offset));
+            }
+        }
+        waveBrush.GradientStops.Add(new GradientStop(colors[0], 1.00));
+
+        var waveRect = new System.Windows.Shapes.Rectangle
+        {
+            Width = MarkSize,
+            Height = MarkSize,
+            Fill = waveBrush,
+        };
+        _antigravityWaveHost.Children.Add(waveRect);
+
+        // 2. Caustic specular sweep layer (subtle liquid wave glint)
+        var causticBrush = new LinearGradientBrush
+        {
+            StartPoint = new Point(0, 0),
+            EndPoint = new Point(1, 1),
+            SpreadMethod = GradientSpreadMethod.Repeat,
+            RelativeTransform = _causticRotate,
+        };
+        causticBrush.GradientStops.Add(new GradientStop(Color.FromArgb(0, 255, 255, 255), 0.00));
+        causticBrush.GradientStops.Add(new GradientStop(Color.FromArgb(0, 255, 255, 255), 0.35));
+        causticBrush.GradientStops.Add(new GradientStop(Color.FromArgb(180, 255, 255, 255), 0.50));
+        causticBrush.GradientStops.Add(new GradientStop(Color.FromArgb(0, 255, 255, 255), 0.65));
+        causticBrush.GradientStops.Add(new GradientStop(Color.FromArgb(0, 255, 255, 255), 1.00));
+
+        var causticRect = new System.Windows.Shapes.Rectangle
+        {
+            Width = MarkSize,
+            Height = MarkSize,
+            Fill = causticBrush,
+        };
+        _antigravityWaveHost.Children.Add(causticRect);
+
+        _antigravityContainer.Children.Add(_antigravityStaticImage);
+        _antigravityContainer.Children.Add(_antigravityWaveHost);
+    }
 
     private void RetintBlob(Color color)
     {
@@ -99,12 +213,28 @@ public sealed class ProviderLogo : Grid
         get => _tool;
         set
         {
+            if (_tool == value) return;
+            var wasWorking = _state == ActivityState.Working;
             _tool = value;
             // A tool identity change is instant, not a state crossfade — the
             // ctor seeds with the default Claude, so reset the seed here or
             // a Codex logo would fade terracotta→blue on every launch.
             _tintSeeded = false;
             ApplyTool();
+            if (wasWorking)
+            {
+                StopAnimations();
+                if (_tool == TriggerTool.Antigravity)
+                {
+                    StartAntigravityWave();
+                }
+                else
+                {
+                    StartSpin();
+                }
+                StartBreath(from: 1.0, to: 1.05, halfCycle: IslandAnimations.WorkingBreathDuration.TimeSpan);
+                StartGlow(radiusFrom: 6, radiusTo: 15, halfCycle: IslandAnimations.WorkingBreathDuration.TimeSpan);
+            }
         }
     }
 
@@ -114,8 +244,22 @@ public sealed class ProviderLogo : Grid
         // ProviderMark): extracted vectors where they exist, the rasterized
         // brand masks elsewhere, Antigravity in its own colours.
         _markHost.Children.Clear();
+        StopAntigravityWave();
+
         var provider = _tool.ToDisplayProvider();
-        if (BrandGeometry.PathData(provider) is { } data)
+        if (_tool == TriggerTool.Antigravity)
+        {
+            EnsureAntigravityElements();
+            if (_antigravityContainer is not null)
+            {
+                _markHost.Children.Add(_antigravityContainer);
+            }
+            else
+            {
+                _markHost.Children.Add(ProviderMarks.IslandMark(provider, MarkSize, _fill));
+            }
+        }
+        else if (BrandGeometry.PathData(provider) is { } data)
         {
             _path.Data = Geometry.Parse("F1 " + data);
             _markHost.Children.Add(_path);
@@ -161,7 +305,14 @@ public sealed class ProviderLogo : Grid
         switch (state)
         {
             case ActivityState.Working:
-                StartSpin();
+                if (_tool == TriggerTool.Antigravity)
+                {
+                    StartAntigravityWave();
+                }
+                else
+                {
+                    StartSpin();
+                }
                 StartBreath(from: 1.0, to: 1.05, halfCycle: IslandAnimations.WorkingBreathDuration.TimeSpan);
                 // macOS radii are gaussian sigmas; WPF BlurRadius is the
                 // kernel extent (~3x), else the glow reads as an outline.
@@ -193,14 +344,60 @@ public sealed class ProviderLogo : Grid
 
     private void StartSpin()
     {
+        // Antigravity does not spin its contour — it uses wave flow instead.
+        if (_tool == TriggerTool.Antigravity) return;
+
         // The marks counter-rotate: Claude clockwise, Codex the other way.
-        var to = _tool is TriggerTool.Claude or TriggerTool.Antigravity or TriggerTool.Cursor ? 360d : -360d;
+        var to = _tool is TriggerTool.Claude or TriggerTool.Cursor ? 360d : -360d;
         var spin = new DoubleAnimation(0, to, IslandAnimations.SpinDuration)
         {
             RepeatBehavior = RepeatBehavior.Forever,
         };
         Timeline.SetDesiredFrameRate(spin, GlowFps);
         _rotate.BeginAnimation(RotateTransform.AngleProperty, spin);
+    }
+
+    private void StartAntigravityWave()
+    {
+        if (_tool != TriggerTool.Antigravity) return;
+        EnsureAntigravityElements();
+        if (_antigravityWaveHost is null || _antigravityStaticImage is null) return;
+
+        _isAntigravityWaveActive = true;
+        _antigravityStaticImage.Visibility = Visibility.Collapsed;
+        _antigravityWaveHost.Visibility = Visibility.Visible;
+
+        var waveAnim = new DoubleAnimation(0.0, 360.0, IslandAnimations.AntigravityWaveDuration)
+        {
+            RepeatBehavior = RepeatBehavior.Forever,
+        };
+        Timeline.SetDesiredFrameRate(waveAnim, GlowFps);
+        _waveRotate.BeginAnimation(RotateTransform.AngleProperty, waveAnim);
+
+        var causticAnim = new DoubleAnimation(0.0, 360.0, IslandAnimations.AntigravityCausticDuration)
+        {
+            RepeatBehavior = RepeatBehavior.Forever,
+        };
+        Timeline.SetDesiredFrameRate(causticAnim, GlowFps);
+        _causticRotate.BeginAnimation(RotateTransform.AngleProperty, causticAnim);
+    }
+
+    private void StopAntigravityWave()
+    {
+        _isAntigravityWaveActive = false;
+        _waveRotate.BeginAnimation(RotateTransform.AngleProperty, null);
+        _causticRotate.BeginAnimation(RotateTransform.AngleProperty, null);
+        _waveRotate.Angle = 0;
+        _causticRotate.Angle = 0;
+
+        if (_antigravityWaveHost is not null)
+        {
+            _antigravityWaveHost.Visibility = Visibility.Collapsed;
+        }
+        if (_antigravityStaticImage is not null)
+        {
+            _antigravityStaticImage.Visibility = Visibility.Visible;
+        }
     }
 
     private void StartBreath(double from, double to, TimeSpan halfCycle)
@@ -259,5 +456,7 @@ public sealed class ProviderLogo : Grid
         }
         _scale.ScaleX = 1;
         _scale.ScaleY = 1;
+
+        StopAntigravityWave();
     }
 }

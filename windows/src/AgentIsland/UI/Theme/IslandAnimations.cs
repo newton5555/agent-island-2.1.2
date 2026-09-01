@@ -54,6 +54,12 @@ public static class IslandAnimations
     /// Attention pulse: scale 1.0-1.16, ease-in-out, 0.42s each direction.
     public static readonly Duration AttentionPulseDuration = new(TimeSpan.FromSeconds(0.42));
 
+    /// Antigravity working wave flow: liquid color rotation over 2.4s.
+    public static readonly Duration AntigravityWaveDuration = new(TimeSpan.FromSeconds(2.4));
+
+    /// Antigravity working wave caustic sweep: specular light sheen over 1.8s.
+    public static readonly Duration AntigravityCausticDuration = new(TimeSpan.FromSeconds(1.8));
+
     private static IEasingFunction MakeBezier(double x1, double y1, double x2, double y2) =>
         new CubicBezierEase { X1 = x1, Y1 = y1, X2 = x2, Y2 = y2 };
 }
