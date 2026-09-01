@@ -18,6 +18,11 @@ namespace AgentIsland.UI;
 public partial class IslandWindow : Window
 {
     private readonly IslandModel _model = IslandModel.Shared;
+    private System.Windows.Interop.HwndSource? _windowSource;
+
+    private const int WmNcHitTest = 0x0084;
+    private const int HtTransparent = -1;
+
     // Unsubscribe actions for the singleton-store handlers, run on Closed —
     // the island is discarded and recreated on a language switch, and without
     // this the dead window stays pinned by the stores and keeps handling
@@ -46,6 +51,98 @@ public partial class IslandWindow : Window
         RightPill.Tool = TriggerTool.Codex;
         RightPill.Mirrored = true;
         Loaded += OnLoaded;
+    }
+
+    /// A transparent layered WPF window can keep the mouse over the visual
+    /// bounds of an effect (the halo) even when the effect itself is marked
+    /// IsHitTestVisible=false. Keep the glow, but let Windows pass points
+    /// outside the real silhouette through to the app underneath.
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        _windowSource = System.Windows.Interop.HwndSource.FromHwnd(
+            new System.Windows.Interop.WindowInteropHelper(this).Handle);
+        _windowSource?.AddHook(WindowMessageHook);
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _windowSource?.RemoveHook(WindowMessageHook);
+        _windowSource = null;
+        base.OnClosed(e);
+    }
+
+    private IntPtr WindowMessageHook(
+        IntPtr hwnd,
+        int message,
+        IntPtr wParam,
+        IntPtr lParam,
+        ref bool handled)
+    {
+        if (message != WmNcHitTest || IsPointInsideSilhouette(lParam))
+        {
+            return IntPtr.Zero;
+        }
+
+        handled = true;
+        return new IntPtr(HtTransparent);
+    }
+
+    /// WM_NCHITTEST carries screen coordinates in physical pixels. WPF's
+    /// PointFromScreen performs the per-monitor-DPI conversion before we test
+    /// against the current animated silhouette, so the rule stays correct at
+    /// every interface scale and during open/close morphs.
+    private bool IsPointInsideSilhouette(IntPtr lParam)
+    {
+        var raw = lParam.ToInt64();
+        var screenPoint = new Point(
+            unchecked((short)(raw & 0xFFFF)),
+            unchecked((short)((raw >> 16) & 0xFFFF)));
+
+        try
+        {
+            var point = Silhouette.PointFromScreen(screenPoint);
+            var width = Silhouette.ActualWidth;
+            var height = Silhouette.ActualHeight;
+            if (width <= 0 || height <= 0
+                || point.X < 0 || point.Y < 0
+                || point.X > width || point.Y > height)
+            {
+                return false;
+            }
+
+            var radius = Math.Min(_model.CornerRadius, Math.Min(width, height) / 2);
+            if (radius <= 0) return true;
+
+            // Top-bar mode has square top corners and rounded bottom corners;
+            // floating mode rounds all four corners just like the Border.
+            if (IsFloating)
+            {
+                if (point.X < radius && point.Y < radius
+                    && !InsideCorner(point, radius, radius, radius)) return false;
+                if (point.X > width - radius && point.Y < radius
+                    && !InsideCorner(point, width - radius, radius, radius)) return false;
+            }
+            if (point.X < radius && point.Y > height - radius
+                && !InsideCorner(point, radius, height - radius, radius)) return false;
+            if (point.X > width - radius && point.Y > height - radius
+                && !InsideCorner(point, width - radius, height - radius, radius)) return false;
+            return true;
+        }
+        catch (InvalidOperationException)
+        {
+            // The handle can receive a message while WPF is tearing down or
+            // before the visual has joined a presentation source. Let the
+            // underlying window receive that point.
+            return false;
+        }
+    }
+
+    private static bool InsideCorner(Point point, double centerX, double centerY, double radius)
+    {
+        var dx = point.X - centerX;
+        var dy = point.Y - centerY;
+        return dx * dx + dy * dy <= radius * radius;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
