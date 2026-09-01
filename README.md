@@ -307,7 +307,15 @@ Run `./scripts/verify.sh` before opening a macOS pull request. Windows changes a
 
 ## Fork provenance
 
-This repository is an unofficial development fork based on **Agent Island v2.1.2**, originally published at [tristan666666/agent-island](https://github.com/tristan666666/agent-island). This source snapshot was obtained from the Fossies archive after the upstream repository became unavailable. The upstream copyright and MIT license notice are retained.
+This repository is an unofficial development fork based on **Agent Island v2.1.2**. It is maintained here for Windows/WPF development and is not a GitHub-native fork because the upstream repository is currently unavailable.
+
+- **Upstream Agent Island repository:** [tristan666666/agent-island](https://github.com/tristan666666/agent-island)
+- **Historical original documentation:** [Agent Island README](https://github.com/tristan666666/agent-island/blob/main/README.md)
+- **Original base project:** [ericjypark/codex-island](https://github.com/ericjypark/codex-island)
+- **Official website:** [agent-island.dev](https://agent-island.dev/)
+- **Source snapshot used here:** [Fossies Agent Island v2.1.2 archive](https://fossies.org/windows/misc/agent-island-2.1.2.zip)
+
+The upstream copyright and MIT license notice are retained. Changes made in this repository are developed independently on the `windows` branch.
 
 ## Credits and license
 

@@ -306,7 +306,15 @@ Agent Island 会读取实现这些页面所需的本地文件和凭据。与其�
 
 ## Fork 来源
 
-本仓库是基于 **Agent Island v2.1.2** 的非官方开发 fork。上游项目原发布于 [tristan666666/agent-island](https://github.com/tristan666666/agent-island)；本源码快照来自 Fossies 归档，当时上游仓库已无法访问。本仓库保留上游版权声明和 MIT 许可证。
+本仓库是基于 **Agent Island v2.1.2** 的非官方开发 fork，主要用于 Windows/WPF 开发。由于上游仓库目前无法访问，本仓库不是 GitHub 原生 Fork，而是基于历史版本建立的独立开发仓库。
+
+- **上游 Agent Island 仓库：** [tristan666666/agent-island](https://github.com/tristan666666/agent-island)
+- **历史原文档：** [Agent Island README](https://github.com/tristan666666/agent-island/blob/main/README.md)
+- **原始基础项目：** [ericjypark/codex-island](https://github.com/ericjypark/codex-island)
+- **官方站点：** [agent-island.dev](https://agent-island.dev/)
+- **本仓库使用的源码归档：** [Fossies Agent Island v2.1.2](https://fossies.org/windows/misc/agent-island-2.1.2.zip)
+
+本仓库保留上游版权声明和 MIT 许可证，后续修改独立维护在 `windows` 分支。
 
 ## 致谢与许可证
 
