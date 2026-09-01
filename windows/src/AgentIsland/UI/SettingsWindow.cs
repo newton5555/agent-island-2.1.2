@@ -25,13 +25,14 @@ public sealed class SettingsWindow : Window
     {
         if (_open is { } existing)
         {
-            existing.Activate();
+            WindowActivation.BringToFront(existing);
             return;
         }
         var window = new SettingsWindow();
         _open = window;
         window.Closed += (_, _) => _open = null;
         window.Show();
+        WindowActivation.BringToFront(window);
 
         // Scripted verification: render the active tab's full content (past the
         // viewport) to a PNG — immune to the window occlusion a screen grab hits.
@@ -231,6 +232,7 @@ public sealed class SettingsWindow : Window
         MinHeight = 460;
         Background = IslandColors.Brush(IslandColors.AlarmBackground);
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        Topmost = true;
         // Pixel-snapped glyphs: the 10-13px settings copy is blurry in WPF's
         // default Ideal mode.
         System.Windows.Media.TextOptions.SetTextFormattingMode(

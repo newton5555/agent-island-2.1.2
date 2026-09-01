@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using AgentIsland.UI.Charts;
@@ -33,10 +34,12 @@ public sealed class ReportWindow : Window
     private readonly Button _copy;
     private readonly StackPanel _actions;
     private readonly Grid _cardHost;
+    private readonly StackPanel _pager;
     private readonly TextBlock _periodLabel;
     private readonly PagerCircle _back;
     private readonly PagerCircle _forward;
     private readonly PagerCircle _calendarButton;
+    private readonly DispatcherTimer _pagerHideTimer;
     private ReportCalendarPopup? _calendar;
     private object _display;
     private int _pageOffset;
@@ -50,14 +53,14 @@ public sealed class ReportWindow : Window
     {
         if (Open.TryGetValue(kind, out var existing))
         {
-            existing.Activate();
+            WindowActivation.BringToFront(existing);
             return;
         }
         var window = new ReportWindow(kind);
         Open[kind] = window;
         window.Closed += (_, _) => Open.Remove(kind);
         window.Show();
-        window.Activate();
+        WindowActivation.BringToFront(window);
     }
 
     private ReportWindow(Kind kind)
@@ -87,28 +90,70 @@ public sealed class ReportWindow : Window
         _periodLabel = new TextBlock
         {
             FontFamily = IslandFonts.Ui,
-            FontSize = 11.5,
+            FontSize = 12,
             FontWeight = FontWeights.Bold,
-            Foreground = Brushes.White,
-            MinWidth = 150,
+            Foreground = Brushes.Black,
+            MinWidth = 140,
             TextAlignment = TextAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
         };
         Typography.SetNumeralAlignment(_periodLabel, System.Windows.FontNumeralAlignment.Tabular);
+        var periodBadge = new Border
+        {
+            // Visuals reference the white pill style of the "Copy image" button below,
+            // with a 1px border and soft shadow to stay sharply visible on a white desktop.
+            Background = Brushes.White,
+            BorderBrush = IslandColors.Brush(Color.FromArgb(0x28, 0x00, 0x00, 0x00)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(15),
+            Height = 30,
+            VerticalAlignment = VerticalAlignment.Center,
+            Effect = new System.Windows.Media.Effects.DropShadowEffect
+            {
+                ShadowDepth = 2,
+                Direction = 270,
+                BlurRadius = 6,
+                Color = Colors.Black,
+                Opacity = 0.10,
+            },
+            Child = _periodLabel,
+        };
         _calendarButton = new PagerCircle("");
         _calendarButton.Clicked += OpenCalendar;
-        var pager = new StackPanel
+        _pager = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Center,
             Margin = new Thickness(0, 0, 0, 14),
+            Background = Brushes.Transparent,
         };
-        pager.Children.Add(_back);
-        _periodLabel.Margin = new Thickness(10, 0, 10, 0);
-        pager.Children.Add(_periodLabel);
-        pager.Children.Add(_forward);
+        _pager.MouseEnter += (_, _) => SetPagerVisible(true);
+        _pager.MouseLeave += (_, _) => CheckHidePager();
+        _pager.Children.Add(_back);
+        _periodLabel.Margin = new Thickness(14, 0, 14, 0);
+        _pager.Children.Add(periodBadge);
+        _pager.Children.Add(_forward);
         _calendarButton.Margin = new Thickness(10, 0, 0, 0);
-        pager.Children.Add(_calendarButton);
+        _pager.Children.Add(_calendarButton);
+        _cardHost = new Grid();
+        _cardHost.MouseEnter += (_, _) => SetPagerVisible(true);
+        _cardHost.MouseLeave += (_, _) => CheckHidePager();
+        _pagerHideTimer = new DispatcherTimer
+        {
+            // Leave enough time to cross the small transparent gap between
+            // the card and the pager without making the chrome feel sticky.
+            Interval = TimeSpan.FromMilliseconds(300),
+        };
+        _pagerHideTimer.Tick += (_, _) =>
+        {
+            _pagerHideTimer.Stop();
+            if (_calendar is { IsOpen: true }) return;
+            if (!_cardHost.IsMouseOver && !_pager.IsMouseOver)
+            {
+                SetPagerVisible(false);
+            }
+        };
+        SetPagerVisible(false, animate: false);
 
         _copy = ActionButton(Localization.L10n.Tr("Copy image"), prominent: true);
         _copy.Click += (_, _) =>
@@ -153,11 +198,10 @@ public sealed class ReportWindow : Window
         // The close control rides ON the card (top-right, dark disc, hover
         // red) — parked on the window's transparent margin it was invisible
         // against a light desktop.
-        _cardHost = new Grid();
         RebuildCard();
 
         var stack = new StackPanel { Margin = new Thickness(26, 22, 26, 12) };
-        stack.Children.Add(pager);
+        stack.Children.Add(_pager);
         stack.Children.Add(_cardHost);
         stack.Children.Add(_actions);
         stack.Children.Add(_coach);
@@ -236,7 +280,7 @@ public sealed class ReportWindow : Window
         _back.Enabled = !_loading && ReportPeriods.HasData(interval.Start, ReportPeriods.EarliestDataDay());
         _forward.Enabled = (_pageOffset > 0 || _anchorDate is not null) && !_loading;
         _calendarButton.Enabled = !_loading && !Core.AppEnvironment.IsDemo;
-        _calendarButton.Tint = _anchorDate is null ? IslandColors.White(0.6) : IslandColors.White(0.95);
+        _calendarButton.Tint = _anchorDate is null ? Color.FromRgb(0x15, 0x17, 0x1C) : Color.FromRgb(0x00, 0x66, 0xCC);
         // While a past page is still assembling, the card shows the previous
         // period — exporting would ship the wrong week.
         _actions.IsEnabled = !_loading;
@@ -302,7 +346,43 @@ public sealed class ReportWindow : Window
         {
             PlacementTarget = _calendarButton,
         };
+        _calendar.Closed += (_, _) => CheckHidePager();
         _calendar.IsOpen = true;
+    }
+
+    private void CheckHidePager()
+    {
+        _pagerHideTimer.Stop();
+        _pagerHideTimer.Start();
+    }
+
+    private void SetPagerVisible(bool visible, bool animate = true)
+    {
+        if (!visible && _calendar is { IsOpen: true }) return;
+
+        if (visible)
+        {
+            // Entering either the card or the pager cancels the pending hide
+            // while the pointer crosses the gap between the two regions.
+            _pagerHideTimer.Stop();
+        }
+
+        _pager.IsHitTestVisible = visible;
+        var targetOpacity = visible ? 1.0 : 0.0;
+        if (!animate)
+        {
+            _pager.BeginAnimation(UIElement.OpacityProperty, null);
+            _pager.Opacity = targetOpacity;
+            return;
+        }
+
+        var duration = new Duration(TimeSpan.FromSeconds(visible ? 0.15 : 0.20));
+        var anim = new DoubleAnimation(targetOpacity, duration)
+        {
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
+        };
+        anim.Freeze();
+        _pager.BeginAnimation(UIElement.OpacityProperty, anim);
     }
 
     /// Any-date anchor: the window becomes [picked day, +7d) weekly /
@@ -313,6 +393,7 @@ public sealed class ReportWindow : Window
         _anchorDate = start;
         _loading = true;
         UpdatePagerChrome();
+        SetPagerVisible(false);
         var end = start.AddDays(_kind == Kind.Weekly ? 7 : 30);
         var slices = await ReportPeriods.SlicesAsync(start, end);
         if (_anchorDate != start) return;
@@ -496,13 +577,17 @@ public sealed class ReportWindow : Window
             FontFamily = IslandFonts.Ui,
             FontSize = 12,
             FontWeight = FontWeights.Bold,
-            Foreground = prominent ? Brushes.Black : IslandColors.Brush(IslandColors.White(0.85)),
+            Foreground = prominent
+                ? Brushes.Black
+                : IslandColors.Brush(Color.FromRgb(0x15, 0x17, 0x1C)),
             Height = 30,
             Padding = new Thickness(16, 0, 16, 0),
             BorderThickness = new Thickness(0),
             Cursor = Cursors.Hand,
         };
-        var face = prominent ? Brushes.White : IslandColors.Brush(IslandColors.White(0.12));
+        var face = prominent
+            ? Brushes.White
+            : IslandColors.Brush(Color.FromRgb(0xEE, 0xF0, 0xF2));
         var factory = new FrameworkElementFactory(typeof(Border));
         factory.SetValue(Border.CornerRadiusProperty, new CornerRadius(15));
         factory.SetValue(Border.BackgroundProperty, face);
@@ -517,22 +602,31 @@ public sealed class ReportWindow : Window
     }
 }
 
-/// The pager's 26pt circular icon button (macOS ReportPagerArrow): white
-/// glyph on a faint disc, both dimmed when disabled.
+/// The pager's 30pt circular icon button (macOS ReportPagerArrow): white
+/// pill face matching the "Copy image" button below, dimmed when disabled.
 internal sealed class PagerCircle : Border
 {
     private readonly TextBlock _glyph;
     private bool _enabled = true;
+    private bool _hovered;
     private Color? _tintOverride;
 
     public event Action? Clicked;
 
     public PagerCircle(string glyph)
     {
-        Width = 26;
-        Height = 26;
-        CornerRadius = new CornerRadius(13);
+        Width = 30;
+        Height = 30;
+        CornerRadius = new CornerRadius(15);
         VerticalAlignment = VerticalAlignment.Center;
+        Effect = new System.Windows.Media.Effects.DropShadowEffect
+        {
+            ShadowDepth = 2,
+            Direction = 270,
+            BlurRadius = 6,
+            Color = Colors.Black,
+            Opacity = 0.10,
+        };
         _glyph = new TextBlock
         {
             Text = glyph,
@@ -551,6 +645,16 @@ internal sealed class PagerCircle : Border
         {
             args.Handled = true;
             if (_enabled) Clicked?.Invoke();
+        };
+        MouseEnter += (_, _) =>
+        {
+            _hovered = true;
+            Render();
+        };
+        MouseLeave += (_, _) =>
+        {
+            _hovered = false;
+            Render();
         };
         Render();
     }
@@ -578,9 +682,21 @@ internal sealed class PagerCircle : Border
 
     private void Render()
     {
-        Background = IslandColors.Brush(IslandColors.White(_enabled ? 0.10 : 0.04));
+        // Visuals reference the white pill style of the "Copy image" button below,
+        // with a 1px border and soft shadow to stay sharply visible on a white desktop.
+        var background = _enabled
+            ? (_hovered
+                ? Color.FromArgb(0xFF, 0xEE, 0xF0, 0xF2)
+                : Colors.White)
+            : Color.FromArgb(0xF0, 0xF6, 0xF7, 0xF9);
+        Background = IslandColors.Brush(background);
+        BorderBrush = IslandColors.Brush(
+            _enabled
+                ? (_hovered ? Color.FromArgb(0x50, 0x00, 0x00, 0x00) : Color.FromArgb(0x28, 0x00, 0x00, 0x00))
+                : Color.FromArgb(0x14, 0x00, 0x00, 0x00));
+        BorderThickness = new Thickness(1);
         _glyph.Foreground = IslandColors.Brush(
-            _enabled ? (_tintOverride ?? IslandColors.White(0.85)) : IslandColors.White(0.22));
+            _enabled ? (_tintOverride ?? Color.FromRgb(0x15, 0x17, 0x1C)) : Color.FromRgb(0xA0, 0xA4, 0xAC));
         Cursor = _enabled ? Cursors.Hand : Cursors.Arrow;
     }
 }
