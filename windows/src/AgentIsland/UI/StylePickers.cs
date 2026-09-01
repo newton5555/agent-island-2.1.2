@@ -105,42 +105,61 @@ public sealed class ChartStylePickerControl : Grid
         {
             case ChartStyle.Ring:
             {
-                var host = new Grid { Width = 26, Height = 26, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+                var host = new Canvas
+                {
+                    Width = 26,
+                    Height = 26,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
                 var center = new Point(13, 13);
-                host.Children.Add(new Ellipse
+                var outerTrack = new Ellipse
                 {
                     Width = 26,
                     Height = 26,
                     Stroke = IslandColors.Brush(IslandColors.White(0.15)),
                     StrokeThickness = 2.0,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
-                });
-                host.Children.Add(new System.Windows.Shapes.Path
+                };
+                Canvas.SetLeft(outerTrack, 0);
+                Canvas.SetTop(outerTrack, 0);
+                host.Children.Add(outerTrack);
+
+                var outerArc = new System.Windows.Shapes.Path
                 {
                     Data = Charts.RingMeter.ArcGeometry(center, (26 - 2.0) / 2, 0.40 * 359.9),
                     Stroke = Brushes.White,
                     StrokeThickness = 2.0,
                     StrokeStartLineCap = PenLineCap.Round,
                     StrokeEndLineCap = PenLineCap.Round,
-                });
-                host.Children.Add(new Ellipse
+                };
+                Canvas.SetLeft(outerArc, 0);
+                Canvas.SetTop(outerArc, 0);
+                host.Children.Add(outerArc);
+
+                var innerOffset = (26 - 15) / 2.0;
+                var innerTrack = new Ellipse
                 {
                     Width = 15,
                     Height = 15,
                     Stroke = IslandColors.Brush(IslandColors.White(0.10)),
                     StrokeThickness = 1.6,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
-                });
-                host.Children.Add(new System.Windows.Shapes.Path
+                };
+                Canvas.SetLeft(innerTrack, innerOffset);
+                Canvas.SetTop(innerTrack, innerOffset);
+                host.Children.Add(innerTrack);
+
+                var innerArc = new System.Windows.Shapes.Path
                 {
                     Data = Charts.RingMeter.ArcGeometry(center, (15 - 1.6) / 2, 0.70 * 359.9),
                     Stroke = IslandColors.Brush(IslandColors.White(0.60)),
                     StrokeThickness = 1.6,
                     StrokeStartLineCap = PenLineCap.Round,
                     StrokeEndLineCap = PenLineCap.Round,
-                });
+                };
+                Canvas.SetLeft(innerArc, 0);
+                Canvas.SetTop(innerArc, 0);
+                host.Children.Add(innerArc);
+
                 return host;
             }
             case ChartStyle.Bar:

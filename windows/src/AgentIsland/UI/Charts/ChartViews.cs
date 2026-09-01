@@ -229,6 +229,7 @@ public sealed class RingMeter : Grid
 {
     private readonly System.Windows.Shapes.Path _progress;
     private readonly System.Windows.Shapes.Path _resetProgress;
+    private readonly System.Windows.Shapes.Ellipse _outerTrack;
     private readonly System.Windows.Shapes.Ellipse _innerTrack;
     private readonly TextBlock _value;
     private readonly TextBlock _label;
@@ -264,16 +265,27 @@ public sealed class RingMeter : Grid
         ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-        var host = new Grid { Width = Diameter, Height = Diameter, VerticalAlignment = VerticalAlignment.Center };
+        var host = new Canvas
+        {
+            Width = Diameter,
+            Height = Diameter,
+            VerticalAlignment = VerticalAlignment.Center,
+            ClipToBounds = false,
+        };
 
-        // Outer quota ring
-        host.Children.Add(new System.Windows.Shapes.Ellipse
+        // 1. Outer Track (Background ring for quota)
+        _outerTrack = new System.Windows.Shapes.Ellipse
         {
             Width = Diameter,
             Height = Diameter,
             Stroke = IslandColors.Brush(IslandColors.White(0.08)),
             StrokeThickness = Stroke,
-        });
+        };
+        Canvas.SetLeft(_outerTrack, 0);
+        Canvas.SetTop(_outerTrack, 0);
+        host.Children.Add(_outerTrack);
+
+        // 2. Outer Progress Arc (Quota)
         _progress = new System.Windows.Shapes.Path
         {
             Stroke = IslandColors.Brush(color),
@@ -281,28 +293,30 @@ public sealed class RingMeter : Grid
             StrokeStartLineCap = PenLineCap.Round,
             StrokeEndLineCap = PenLineCap.Round,
         };
+        Canvas.SetLeft(_progress, 0);
+        Canvas.SetTop(_progress, 0);
         host.Children.Add(_progress);
 
-        // Inner reset countdown ring
+        // 3. Inner Track (Background ring for reset countdown)
+        var innerOffset = (Diameter - InnerDiameter) / 2;
         _innerTrack = new System.Windows.Shapes.Ellipse
         {
             Width = InnerDiameter,
             Height = InnerDiameter,
-            Stroke = IslandColors.Brush(IslandColors.White(0.05)),
+            Stroke = IslandColors.Brush(IslandColors.White(0.06)),
             StrokeThickness = InnerStroke,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
         };
+        Canvas.SetLeft(_innerTrack, innerOffset);
+        Canvas.SetTop(_innerTrack, innerOffset);
         host.Children.Add(_innerTrack);
 
+        // 4. Inner Progress Arc (Reset time progress)
         _resetProgress = new System.Windows.Shapes.Path
         {
-            Stroke = IslandColors.Brush(IslandColors.White(0.60)),
+            Stroke = IslandColors.Brush(IslandColors.White(0.65)),
             StrokeThickness = InnerStroke,
             StrokeStartLineCap = PenLineCap.Round,
             StrokeEndLineCap = PenLineCap.Round,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
             Effect = new System.Windows.Media.Effects.DropShadowEffect
             {
                 ShadowDepth = 0,
@@ -311,6 +325,8 @@ public sealed class RingMeter : Grid
                 Opacity = 0.35,
             },
         };
+        Canvas.SetLeft(_resetProgress, 0);
+        Canvas.SetTop(_resetProgress, 0);
         host.Children.Add(_resetProgress);
 
         SetColumn(host, 0);
