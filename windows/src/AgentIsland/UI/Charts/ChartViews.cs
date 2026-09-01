@@ -221,25 +221,41 @@ public sealed class CapsuleMeter : Grid
     }
 }
 
-/// Circular progress ring, macOS layout: thin 3pt ring with an empty
-/// center, the percent (18pt) and label stacked beside it. The trim
-/// animates on value changes (the "Ring" style).
+/// Circular dual progress ring (Apple/macOS-style activity rings):
+/// - Outer ring: Quota used / remaining percentage in brand / urgency color.
+/// - Inner ring: Reset cycle countdown progress towards 100% reset.
+/// The percent (18pt) and label are stacked beside it.
 public sealed class RingMeter : Grid
 {
     private readonly System.Windows.Shapes.Path _progress;
+    private readonly System.Windows.Shapes.Path _resetProgress;
+    private readonly System.Windows.Shapes.Ellipse _innerTrack;
     private readonly TextBlock _value;
     private readonly TextBlock _label;
+
     private const double Diameter = 56;
-    private const double Stroke = 3;
+    private const double Stroke = 3.5;
+    private const double InnerDiameter = 38;
+    private const double InnerStroke = 2.5;
 
     public static readonly DependencyProperty SweepProperty = DependencyProperty.Register(
         nameof(Sweep), typeof(double), typeof(RingMeter),
         new PropertyMetadata(0.0, (d, _) => ((RingMeter)d).Redraw()));
 
+    public static readonly DependencyProperty InnerSweepProperty = DependencyProperty.Register(
+        nameof(InnerSweep), typeof(double), typeof(RingMeter),
+        new PropertyMetadata(0.0, (d, _) => ((RingMeter)d).RedrawInner()));
+
     public double Sweep
     {
         get => (double)GetValue(SweepProperty);
         set => SetValue(SweepProperty, value);
+    }
+
+    public double InnerSweep
+    {
+        get => (double)GetValue(InnerSweepProperty);
+        set => SetValue(InnerSweepProperty, value);
     }
 
     public RingMeter(Color color)
@@ -249,8 +265,12 @@ public sealed class RingMeter : Grid
         ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         var host = new Grid { Width = Diameter, Height = Diameter, VerticalAlignment = VerticalAlignment.Center };
+
+        // Outer quota ring
         host.Children.Add(new System.Windows.Shapes.Ellipse
         {
+            Width = Diameter,
+            Height = Diameter,
             Stroke = IslandColors.Brush(IslandColors.White(0.08)),
             StrokeThickness = Stroke,
         });
@@ -262,6 +282,37 @@ public sealed class RingMeter : Grid
             StrokeEndLineCap = PenLineCap.Round,
         };
         host.Children.Add(_progress);
+
+        // Inner reset countdown ring
+        _innerTrack = new System.Windows.Shapes.Ellipse
+        {
+            Width = InnerDiameter,
+            Height = InnerDiameter,
+            Stroke = IslandColors.Brush(IslandColors.White(0.05)),
+            StrokeThickness = InnerStroke,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        host.Children.Add(_innerTrack);
+
+        _resetProgress = new System.Windows.Shapes.Path
+        {
+            Stroke = IslandColors.Brush(IslandColors.White(0.60)),
+            StrokeThickness = InnerStroke,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Effect = new System.Windows.Media.Effects.DropShadowEffect
+            {
+                ShadowDepth = 0,
+                BlurRadius = 3,
+                Color = Colors.White,
+                Opacity = 0.35,
+            },
+        };
+        host.Children.Add(_resetProgress);
+
         SetColumn(host, 0);
         Children.Add(host);
 
@@ -302,7 +353,7 @@ public sealed class RingMeter : Grid
         Children.Add(beside);
     }
 
-    public void Update(string label, double value)
+    public void Update(string label, double value, WindowUsage? window = null)
     {
         _label.Text = label.ToLowerInvariant();
         _value.Text = $"{(int)value}";
@@ -314,15 +365,35 @@ public sealed class RingMeter : Grid
             EasingFunction = IslandAnimations.StrongEaseOut(),
         };
         BeginAnimation(SweepProperty, sweep);
+
+        double resetRatio = 0;
+        if (window is { ResetAt: { } resetAt } && resetAt > DateTimeOffset.Now)
+        {
+            double periodSeconds = window.PeriodSeconds is { } p && p > 0
+                ? p
+                : (window.IsLongPeriod ? 7 * 86400 : 5 * 3600);
+            var remainingSeconds = (resetAt - DateTimeOffset.Now).TotalSeconds;
+            // Progress towards reset: 0% at cycle start, 100% when reset time arrives
+            resetRatio = Math.Clamp(1.0 - (remainingSeconds / periodSeconds), 0.03, 1.0);
+        }
+
+        var innerSweep = new DoubleAnimation(
+            resetRatio * 359.9,
+            IslandAnimations.StrongEaseOutDuration)
+        {
+            EasingFunction = IslandAnimations.StrongEaseOut(),
+        };
+        BeginAnimation(InnerSweepProperty, innerSweep);
     }
 
     private void Redraw() =>
-        _progress.Data = Sweep <= 0.1 ? null : ArcGeometry(Sweep);
+        _progress.Data = Sweep <= 0.1 ? null : ArcGeometry(new Point(Diameter / 2, Diameter / 2), (Diameter - Stroke) / 2, Sweep);
 
-    private static Geometry ArcGeometry(double sweepDegrees)
+    private void RedrawInner() =>
+        _resetProgress.Data = InnerSweep <= 0.1 ? null : ArcGeometry(new Point(Diameter / 2, Diameter / 2), (InnerDiameter - InnerStroke) / 2, InnerSweep);
+
+    public static Geometry ArcGeometry(Point center, double radius, double sweepDegrees)
     {
-        var radius = (Diameter - Stroke) / 2;
-        var center = new Point(Diameter / 2, Diameter / 2);
         var start = new Point(center.X, center.Y - radius);
         var angle = sweepDegrees * Math.PI / 180;
         var end = new Point(
@@ -340,6 +411,9 @@ public sealed class RingMeter : Grid
         geometry.Figures.Add(figure);
         return geometry;
     }
+
+    public static Geometry ArcGeometry(double diameter, double stroke, double sweepDegrees) =>
+        ArcGeometry(new Point(diameter / 2, diameter / 2), (diameter - stroke) / 2, sweepDegrees);
 }
 
 /// Numbers-first style: oversized percent over a thin glowing brand meter,
@@ -613,7 +687,7 @@ public sealed class ChartTile : StackPanel
                 _capsule.Update(value);
                 break;
             case ChartStyle.Ring:
-                _ring.Update(label, value);
+                _ring.Update(label, value, window);
                 break;
             case ChartStyle.Numeric:
                 _numeric.Update(label, value);

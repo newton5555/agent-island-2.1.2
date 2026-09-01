@@ -105,19 +105,41 @@ public sealed class ChartStylePickerControl : Grid
         {
             case ChartStyle.Ring:
             {
-                // The macOS "Pie" tile is a FILLED wedge on a dim disc, not a
-                // stroked arc.
                 var host = new Grid { Width = 26, Height = 26, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-                host.Children.Add(new Ellipse { Fill = IslandColors.Brush(IslandColors.White(0.08)) });
+                var center = new Point(13, 13);
+                host.Children.Add(new Ellipse
+                {
+                    Width = 26,
+                    Height = 26,
+                    Stroke = IslandColors.Brush(IslandColors.White(0.15)),
+                    StrokeThickness = 2.0,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                });
                 host.Children.Add(new System.Windows.Shapes.Path
                 {
-                    Data = PieSliceGeometry(26, 0.35),
-                    Fill = Brushes.White,
+                    Data = Charts.RingMeter.ArcGeometry(center, (26 - 2.0) / 2, 0.40 * 359.9),
+                    Stroke = Brushes.White,
+                    StrokeThickness = 2.0,
+                    StrokeStartLineCap = PenLineCap.Round,
+                    StrokeEndLineCap = PenLineCap.Round,
                 });
                 host.Children.Add(new Ellipse
                 {
-                    Stroke = IslandColors.Brush(IslandColors.White(0.12)),
-                    StrokeThickness = 0.8,
+                    Width = 15,
+                    Height = 15,
+                    Stroke = IslandColors.Brush(IslandColors.White(0.10)),
+                    StrokeThickness = 1.6,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                });
+                host.Children.Add(new System.Windows.Shapes.Path
+                {
+                    Data = Charts.RingMeter.ArcGeometry(center, (15 - 1.6) / 2, 0.70 * 359.9),
+                    Stroke = IslandColors.Brush(IslandColors.White(0.60)),
+                    StrokeThickness = 1.6,
+                    StrokeStartLineCap = PenLineCap.Round,
+                    StrokeEndLineCap = PenLineCap.Round,
                 });
                 return host;
             }
