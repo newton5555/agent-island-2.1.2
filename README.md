@@ -17,6 +17,31 @@ The upstream repository and its historical documentation links may currently be 
 - **Default branch:** `windows`
 - **Purpose:** Windows/WPF development and maintenance based on the v2.1.2 source snapshot.
 
+## Windows/WPF changes in this fork
+
+The `windows/` project is the active Windows/WPF implementation maintained in
+this fork. The current branch includes the following Windows-side changes:
+
+- **Five-provider selection:** Claude, Codex, Antigravity (`agy`), Grok, and
+  Cursor can be enabled in Settings. At most two providers are shown on the
+  island; their order determines the left and right slots, and provider rows
+  can be reordered by dragging.
+- **Usage integration:** Antigravity usage is read from the local `agy` /
+  Antigravity language-server session, including CSRF/session handling. Claude
+  and Codex usage keep their separate quota windows, including the Codex 5-hour
+  and weekly windows.
+- **Quota presentation:** Bar, stepped, and numeric styles support dual quota
+  windows and a green reset-time progress indicator. Progress is refreshed with
+  the normal usage polling cycle.
+- **Windows interaction:** Floating mode remains draggable and remembers its
+  position. The WPF window now tests the actual rounded silhouette instead of
+  the transparent canvas; the halo and other transparent margins pass mouse
+  input through to the application underneath, including applications from
+  another process.
+- **Persistence and verification:** Provider ordering/selection is saved as an
+  atomic preference update, and the Windows test runner covers provider
+  selection, quota parsing, layout, and usage-cache behavior.
+
 ## Related documentation
 
 - [Windows build notes](windows/README.md)
