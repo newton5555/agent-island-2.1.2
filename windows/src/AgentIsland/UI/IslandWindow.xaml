@@ -68,18 +68,18 @@
                          (the notch gap; zero in solo-centered mode). -->
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition x:Name="LeftPillColumn" Width="0"/>
-                        <ColumnDefinition x:Name="ClaudeTabColumn" Width="38"/>
+                        <ColumnDefinition x:Name="LeftTabColumn" Width="38"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition x:Name="CodexTabColumn" Width="38"/>
+                        <ColumnDefinition x:Name="RightTabColumn" Width="38"/>
                         <ColumnDefinition x:Name="RightPillColumn" Width="0"/>
                     </Grid.ColumnDefinitions>
                     <!-- Pills anchor to the OUTER edges (14pt inset), leaving
                          air between pill and logo — the macOS bar spacing. -->
-                    <ui:NotchPeekPill x:Name="ClaudePill" Grid.Column="0"
+                    <ui:NotchPeekPill x:Name="LeftPill" Grid.Column="0"
                                       HorizontalAlignment="Left" Margin="14,0,6,0" Opacity="0"/>
-                    <ui:ProviderLogo x:Name="ClaudeLogo" Grid.Column="1"/>
-                    <ui:ProviderLogo x:Name="CodexLogo" Grid.Column="3"/>
-                    <ui:NotchPeekPill x:Name="CodexPill" Grid.Column="4"
+                    <ui:ProviderLogo x:Name="LeftLogo" Grid.Column="1"/>
+                    <ui:ProviderLogo x:Name="RightLogo" Grid.Column="3"/>
+                    <ui:NotchPeekPill x:Name="RightPill" Grid.Column="4"
                                       HorizontalAlignment="Right" Margin="6,0,14,0" Opacity="0"/>
                 </Grid>
 

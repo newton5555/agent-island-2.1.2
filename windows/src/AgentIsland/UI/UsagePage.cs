@@ -143,8 +143,8 @@ public sealed class UsagePage : Border
         return button;
     }
 
-    /// Speak the window the provider actually meters: Claude's 5h, Codex's
-    /// weekly, Gemini's daily bucket, Grok's weekly pool, Cursor's billing
+    /// Speak the window the provider actually meters: Claude's 5h, Codex's 5h,
+    /// Gemini's daily bucket, Grok's weekly pool, Cursor's billing
     /// cycle. Guest windows are synthesized without a PeriodSeconds, so these
     /// keys are what the tiles print — ChartTile's derived label has no
     /// 30-day branch and would otherwise call Cursor's cycle a "week".
@@ -323,7 +323,7 @@ internal sealed class ProviderChartsBlock : StackPanel
         _secondary.Update(usage.Weekly, style);
 
         // A provider reporting one window gets one tile spanning the block —
-        // Codex's July 2026 shape, and every guest's shape — instead of a
+        // Codex's primary-only shape, and every guest's shape — instead of a
         // permanent "no data" ghost beside the real one.
         var single = usage.SecondaryMissing;
         _secondary.Visibility = single ? Visibility.Collapsed : Visibility.Visible;

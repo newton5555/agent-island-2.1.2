@@ -4,9 +4,8 @@ namespace AgentIsland.Usage;
 /// [0, 1]; Error carries the caption shown in place of a value.
 /// PeriodSeconds is the window length as reported by the provider (Codex
 /// sends limit_window_seconds; Claude's windows are the documented 5h/7d).
-/// It drives display labels, so when a provider changes its quota model —
-/// Codex replaced its 5-hour window with a single weekly one in July 2026 —
-/// the tile relabels itself instead of lying under a hardcoded "5h". null on
+/// It drives display labels, so when a provider changes its quota model,
+/// the tile relabels itself instead of lying under a hardcoded label. null on
 /// old cached snapshots; labels fall back to the slot name.
 public sealed record WindowUsage(
     double UsedPercent, DateTimeOffset? ResetAt, string? Error, double? PeriodSeconds = null)
@@ -50,7 +49,7 @@ public sealed record AppUsage(
         FiveHour.HasError && Weekly.HasError && FiveHour.UsedPercent == 0 && Weekly.UsedPercent == 0;
 
     /// True when the provider reported only ONE window on a healthy fetch —
-    /// Codex's July 2026 shape (a single weekly quota, secondary_window
+    /// Codex's primary-only shape (a single weekly quota, secondary_window
     /// gone). The UI hides the empty tile instead of pinning "no data".
     /// Cold start (both unknown) and fetch failures don't qualify, because
     /// the primary slot carries an error too.

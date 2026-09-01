@@ -623,8 +623,7 @@ public sealed class ChartTile : StackPanel
     }
 
     /// Tiles label themselves from the window length the provider actually
-    /// reports — Codex swapped its 5-hour window for a single weekly one in
-    /// July 2026, and a hardcoded "5h" would lie under it. Old caches carry
+    /// reports, so a hardcoded label is not assumed. Old caches carry
     /// no period; those fall back to the slot's historical label.
     internal static string PeriodLabel(WindowUsage window, string fallbackKey)
     {

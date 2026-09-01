@@ -117,43 +117,57 @@ public static class ProviderSelection
 {
     public const int MaxEnabled = 2;
 
-    /// Decode a persisted raw list: unknown values drop, duplicates drop,
-    /// canonical order is restored, anything past the cap is discarded.
-    public static List<DisplayProvider> Sanitize(IEnumerable<string>? raw)
+    public static List<DisplayProvider> SanitizeOrder(IEnumerable<string>? rawOrder)
     {
-        var seen = new HashSet<DisplayProvider>();
-        foreach (var value in raw ?? Array.Empty<string>())
+        var result = new List<DisplayProvider>();
+        foreach (var value in rawOrder ?? Array.Empty<string>())
         {
-            if (DisplayProviders.Parse(value) is { } provider) seen.Add(provider);
+            if (DisplayProviders.Parse(value) is { } provider && !result.Contains(provider))
+            {
+                result.Add(provider);
+            }
         }
-        return seen.OrderBy(provider => provider.SlotOrder()).Take(MaxEnabled).ToList();
+        foreach (var provider in DisplayProviders.All)
+        {
+            if (!result.Contains(provider)) result.Add(provider);
+        }
+        return result;
     }
 
-    /// Flip a provider's slot membership. Returns false when this would turn
-    /// a third provider on: `next` comes back unchanged, the caller explains,
-    /// and nobody else's pick is silently evicted.
-    public static bool TryToggle(
-        IReadOnlyList<DisplayProvider> current,
-        DisplayProvider provider,
-        out List<DisplayProvider> next)
+    public static List<DisplayProvider> SanitizeEnabled(IEnumerable<string>? rawEnabled, IReadOnlyList<DisplayProvider> order)
     {
-        if (current.Contains(provider))
+        var enabledSet = new HashSet<DisplayProvider>();
+        foreach (var value in rawEnabled ?? Array.Empty<string>())
         {
-            next = current.Where(item => item != provider).ToList();
+            if (DisplayProviders.Parse(value) is { } provider)
+            {
+                enabledSet.Add(provider);
+            }
+        }
+        return order.Where(enabledSet.Contains).Take(MaxEnabled).ToList();
+    }
+
+    public static bool TryToggle(
+        IReadOnlyList<DisplayProvider> currentEnabled,
+        DisplayProvider provider,
+        IReadOnlyList<DisplayProvider> order,
+        out List<DisplayProvider> nextEnabled)
+    {
+        if (currentEnabled.Contains(provider))
+        {
+            nextEnabled = currentEnabled.Where(item => item != provider).ToList();
             return true;
         }
-        if (current.Count >= MaxEnabled)
+        if (currentEnabled.Count >= MaxEnabled)
         {
-            next = current.ToList();
+            nextEnabled = currentEnabled.ToList();
             return false;
         }
-        next = current.Append(provider).OrderBy(item => item.SlotOrder()).ToList();
+        var nextSet = new HashSet<DisplayProvider>(currentEnabled) { provider };
+        nextEnabled = order.Where(nextSet.Contains).ToList();
         return true;
     }
 
-    /// First-run migration from the pre-slot per-provider toggles. Only the
-    /// claude/codex pair ever governed an island slot, so only it carries
-    /// over — existing users keep exactly the island they had.
     public static List<DisplayProvider> Migrated(bool claudeVisible, bool codexVisible)
     {
         var result = new List<DisplayProvider>();

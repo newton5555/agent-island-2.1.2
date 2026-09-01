@@ -94,27 +94,18 @@ public sealed class UsageExhaustionAlarm
         bool codexVisible = true,
         bool quotaAlarmEnabled = true)
     {
-        // Codex dropped its 5-hour window for a single weekly quota (July
-        // 2026), and a full-screen "you're out for the week" panel is noise,
-        // not an actionable interruption — so Codex no longer raises the
-        // quota alarm at all (product call, 2026-07-13). Codex quota still
-        // shows in the tiles and still drives the threshold warnings; Claude
-        // keeps the alarm (its 5h window lives).
-        _ = codex;
-        _ = codexVisible;
         var all = new (TriggerTool Provider, QuotaWindowKind Window, WindowUsage Usage)[]
         {
             (TriggerTool.Claude, QuotaWindowKind.FiveHour, claude.FiveHour),
             (TriggerTool.Claude, QuotaWindowKind.Weekly, claude.Weekly),
+            (TriggerTool.Codex, QuotaWindowKind.FiveHour, codex.FiveHour),
+            (TriggerTool.Codex, QuotaWindowKind.Weekly, codex.Weekly),
         };
         // Providers switched off in Settings never alarm — same contract as
         // the island's red attention glow.
         var windows = System.Array.FindAll(all, w =>
-            // The window list is Claude-only since 2026-07 (Codex moved to
-            // weekly budgeting and its exhaustion alarm was retired), so
-            // visibility is Claude's alone — the old codexVisible arm was
-            // unreachable.
-            w.Provider == TriggerTool.Claude && claudeVisible);
+            (w.Provider == TriggerTool.Claude && claudeVisible) ||
+            (w.Provider == TriggerTool.Codex && codexVisible));
 
         // Warmup: on the first real sample, record anything already exhausted
         // as already-alarmed so we don't pop for a state that predates launch.

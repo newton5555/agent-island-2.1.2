@@ -75,9 +75,8 @@ public static class UsageCachePolicy
     public static AppUsage? CacheableCopy(AppUsage usage)
     {
         // A healthy fetch is cacheable even when the provider reports only
-        // one window (Codex's July 2026 shape: secondary_window gone, so the
-        // weekly slot carries a permanent "no data"). Requiring BOTH windows
-        // clean would have silently stopped caching Codex forever.
+        // one window (like Codex's primary-only shape). Requiring BOTH windows
+        // clean would silently stop caching in those cases.
         if (usage.FiveHour.Error is not null
             || (usage.Weekly.Error is not null && !usage.SecondaryMissing)
             || !HasUsageValues(usage))
@@ -103,7 +102,9 @@ public static class UsageCachePolicy
         usage.FiveHour.UsedPercent > 0
         || usage.Weekly.UsedPercent > 0
         || usage.FiveHour.ResetAt is not null
-        || usage.Weekly.ResetAt is not null;
+        || usage.Weekly.ResetAt is not null
+        || usage.FiveHour.PeriodSeconds is not null
+        || usage.Weekly.PeriodSeconds is not null;
 
     private static (AppUsage Usage, DateTimeOffset UpdatedAt, bool IsFresh)? ProviderForSave(
         AppUsage current,

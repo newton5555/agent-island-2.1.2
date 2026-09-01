@@ -89,6 +89,7 @@ public static class Program
             TurnAlarmNavigatorTests.RunAll();
             FormattingTests.RunAll();
             ScannerCwdTests.RunAll();
+            CodexPayloadParsingTests.RunAll();
             Console.WriteLine("ALL GREEN");
             return 0;
         }

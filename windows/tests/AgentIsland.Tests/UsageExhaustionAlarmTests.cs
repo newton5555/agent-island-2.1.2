@@ -29,7 +29,7 @@ public static class UsageExhaustionAlarmTests
             ("a second window crossing in a later pass is its own event", TestSeparateWindowSeparatePass),
             ("alarm key matches the macOS shape", TestAlarmKeyShape),
             ("hidden provider never fires", TestHiddenProviderNeverFires),
-            ("codex never raises the quota alarm (weekly-only era)", TestCodexNeverFires),
+            ("codex raises quota alarm", TestCodexFires),
             ("the alarm names the window's real period", TestAlarmNamesRealPeriod),
         };
 
@@ -200,20 +200,16 @@ public static class UsageExhaustionAlarmTests
             "a null reset stamps 'none', matching macOS");
     }
 
-    private static void TestCodexNeverFires()
+    private static void TestCodexFires()
     {
         var (alarm, fired) = Make();
         // Warmup healthy on both providers.
         alarm.Recompute(Usage(0.2, ResetA), Usage(0.2, ResetA), remindersEnabled: true);
-        // Codex exhausts its (weekly-only) quota: tiles and threshold
-        // warnings cover it; the full-screen panel stays away.
+        // Codex exhausts its quota and should raise an alarm.
         alarm.Recompute(Usage(0.2, ResetA), Usage(1.0, ResetA), remindersEnabled: true);
+        Expect(fired.Count == 1 && fired[0].StartsWith("exhausted-codex-", StringComparison.Ordinal), "codex exhaustion must raise the quota alarm");
         alarm.Recompute(Usage(0.2, ResetA), UsageBoth(1.0, ResetA, 1.0, ResetWeekly), remindersEnabled: true);
-        Expect(fired.Count == 0, "codex exhaustion must never raise the quota alarm");
-        // Claude still alarms normally alongside.
-        alarm.Recompute(Usage(1.0, ResetA), UsageBoth(1.0, ResetA, 1.0, ResetWeekly), remindersEnabled: true);
-        Expect(fired.Count == 1 && fired[0].StartsWith("exhausted-claude-", StringComparison.Ordinal),
-            "claude keeps the alarm while codex stays silent");
+        Expect(fired.Count == 2, "codex exhaustion must raise the quota alarm");
     }
 
     private static void TestAlarmNamesRealPeriod()

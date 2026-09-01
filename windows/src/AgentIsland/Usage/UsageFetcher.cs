@@ -33,8 +33,8 @@ public static class UsageFetcher
             if (status != 200) return AppUsage.ErrorPair($"http {status}");
 
             using var doc = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(ct));
-            // The payload gained credits/spend_control alongside the July
-            // 2026 weekly-only shape; only the fields below are read, so any
+            // The payload gained credits/spend_control alongside the newer
+            // multi-window shape; only the fields below are read, so any
             // additions are ignored by construction.
             if (Jsonl.GetObject(doc.RootElement, "rate_limit") is not { } rateLimit)
             {
@@ -121,15 +121,14 @@ public static class UsageFetcher
         }
     }
 
-    private static WindowUsage ParseCodexWindow(JsonElement? obj)
+    internal static WindowUsage ParseCodexWindow(JsonElement? obj)
     {
         if (obj is not { } window) return WindowUsage.Unknown;
         var used = Jsonl.GetDouble(window, "used_percent") ?? 0;
         DateTimeOffset? resetAt = Jsonl.GetDouble(window, "reset_at") is { } epoch
             ? DateTimeOffset.FromUnixTimeMilliseconds((long)(epoch * 1000))
             : null;
-        // The payload states its own window length (604800s = the single
-        // weekly window Codex moved to in July 2026). Labels render from it.
+        // The payload states its own window length (e.g. 18000s or 604800s). Labels render from it.
         var period = Jsonl.GetDouble(window, "limit_window_seconds");
         return new WindowUsage(used / 100, resetAt, null, period);
     }

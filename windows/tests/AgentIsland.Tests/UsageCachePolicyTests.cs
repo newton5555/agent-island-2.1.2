@@ -46,7 +46,7 @@ public static class UsageCachePolicyTests
 
     private static void TestSingleWindowShapeIsCacheable()
     {
-        // Codex's July 2026 shape: a healthy fetch reporting only the weekly
+        // Codex's primary-only shape: a healthy fetch reporting only the weekly
         // primary window — the secondary slot carries the "no data" sentinel.
         // Requiring BOTH windows clean would silently stop caching Codex
         // forever; the copy must keep the marker (so a cold start hides the

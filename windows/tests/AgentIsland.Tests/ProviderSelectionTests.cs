@@ -12,11 +12,11 @@ public static class ProviderSelectionTests
     {
         var tests = new (string Name, Action Test)[]
         {
-            ("sanitize keeps canonical order", TestSanitizeOrders),
+            ("sanitize keeps user order", TestSanitizeOrders),
             ("sanitize drops unknown and duplicate entries", TestSanitizeCleans),
             ("sanitize caps at two", TestSanitizeCaps),
-            ("sanitize of null is empty", TestSanitizeNull),
-            ("toggle on adds in canonical order", TestToggleAdds),
+            ("sanitize of null is full/empty", TestSanitizeNull),
+            ("toggle on adds in user order", TestToggleAdds),
             ("toggle off removes", TestToggleRemoves),
             ("third pick is refused, nothing evicted", TestThirdPickRefused),
             ("toggle off at the cap always succeeds", TestToggleOffAtCap),
@@ -40,43 +40,45 @@ public static class ProviderSelectionTests
 
     private static void TestSanitizeOrders()
     {
-        var result = ProviderSelection.Sanitize(new[] { "codex", "claude" });
-        Expect(Spell(result) == "claude,codex", $"canonical order not restored: {Spell(result)}");
+        var result = ProviderSelection.SanitizeOrder(new[] { "codex", "claude" });
+        Expect(Spell(result) == "codex,claude,antigravity,grok,cursor", $"user order not preserved: {Spell(result)}");
     }
 
     private static void TestSanitizeCleans()
     {
-        var result = ProviderSelection.Sanitize(new[] { "grok", "nope", "grok", "" });
-        Expect(Spell(result) == "grok", $"unknown/duplicate entries survived: {Spell(result)}");
+        var result = ProviderSelection.SanitizeOrder(new[] { "grok", "nope", "grok", "" });
+        Expect(Spell(result) == "grok,claude,codex,antigravity,cursor", $"unknown/duplicate entries survived or missing omitted: {Spell(result)}");
     }
 
     private static void TestSanitizeCaps()
     {
-        var result = ProviderSelection.Sanitize(new[] { "cursor", "grok", "gemini", "codex", "claude" });
-        Expect(result.Count == ProviderSelection.MaxEnabled,
-            $"cap of {ProviderSelection.MaxEnabled} not enforced: {Spell(result)}");
-        // The cap keeps the FIRST two in canonical order, so a settings file
-        // hand-edited to five providers degrades to the historical pair.
-        Expect(Spell(result) == "claude,codex", $"cap kept the wrong two: {Spell(result)}");
+        var order = ProviderSelection.SanitizeOrder(new[] { "cursor", "grok", "antigravity", "codex", "claude" });
+        var enabled = ProviderSelection.SanitizeEnabled(new[] { "cursor", "grok", "antigravity", "codex", "claude" }, order);
+        Expect(enabled.Count == ProviderSelection.MaxEnabled,
+            $"cap of {ProviderSelection.MaxEnabled} not enforced: {Spell(enabled)}");
+        Expect(Spell(enabled) == "cursor,grok", $"cap kept the wrong two: {Spell(enabled)}");
     }
 
     private static void TestSanitizeNull()
     {
-        Expect(ProviderSelection.Sanitize(null).Count == 0, "a missing key must decode to an empty selection");
+        Expect(ProviderSelection.SanitizeOrder(null).Count == 5, "a missing key must decode to a full order");
+        Expect(ProviderSelection.SanitizeEnabled(null, new List<DisplayProvider>()).Count == 0, "a missing key must decode to an empty selection");
     }
 
     private static void TestToggleAdds()
     {
         var current = new List<DisplayProvider> { DisplayProvider.Cursor };
-        Expect(ProviderSelection.TryToggle(current, DisplayProvider.Claude, out var next),
+        var order = new List<DisplayProvider> { DisplayProvider.Claude, DisplayProvider.Cursor };
+        Expect(ProviderSelection.TryToggle(current, DisplayProvider.Claude, order, out var next),
             "adding a second provider must succeed");
-        Expect(Spell(next) == "claude,cursor", $"added out of canonical order: {Spell(next)}");
+        Expect(Spell(next) == "claude,cursor", $"added out of user order: {Spell(next)}");
     }
 
     private static void TestToggleRemoves()
     {
         var current = new List<DisplayProvider> { DisplayProvider.Claude, DisplayProvider.Grok };
-        Expect(ProviderSelection.TryToggle(current, DisplayProvider.Claude, out var next),
+        var order = new List<DisplayProvider> { DisplayProvider.Claude, DisplayProvider.Grok };
+        Expect(ProviderSelection.TryToggle(current, DisplayProvider.Claude, order, out var next),
             "removing an occupant must succeed");
         Expect(Spell(next) == "grok", $"wrong provider removed: {Spell(next)}");
     }
@@ -84,7 +86,8 @@ public static class ProviderSelectionTests
     private static void TestThirdPickRefused()
     {
         var current = new List<DisplayProvider> { DisplayProvider.Claude, DisplayProvider.Codex };
-        Expect(!ProviderSelection.TryToggle(current, DisplayProvider.Grok, out var next),
+        var order = new List<DisplayProvider> { DisplayProvider.Claude, DisplayProvider.Codex, DisplayProvider.Grok };
+        Expect(!ProviderSelection.TryToggle(current, DisplayProvider.Grok, order, out var next),
             "a third pick must be refused");
         Expect(Spell(next) == "claude,codex",
             $"a refused toggle must leave the selection untouched: {Spell(next)}");
@@ -92,11 +95,11 @@ public static class ProviderSelectionTests
 
     private static void TestToggleOffAtCap()
     {
-        // The cap gates ADDITION only — a full island must still be editable.
         var current = new List<DisplayProvider> { DisplayProvider.Antigravity, DisplayProvider.Cursor };
-        Expect(ProviderSelection.TryToggle(current, DisplayProvider.Cursor, out var next),
+        var order = new List<DisplayProvider> { DisplayProvider.Antigravity, DisplayProvider.Cursor, DisplayProvider.Codex };
+        Expect(ProviderSelection.TryToggle(current, DisplayProvider.Cursor, order, out var next),
             "turning one off while full must succeed");
-        Expect(Spell(next) == "gemini", $"wrong result at the cap: {Spell(next)}");
+        Expect(Spell(next) == "antigravity", $"wrong result at the cap: {Spell(next)}");
     }
 
     private static void TestMigration()

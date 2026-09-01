@@ -1177,18 +1177,70 @@ public sealed class SettingsWindow : Window
 
     // MARK: - Providers
 
+    private class SortableProviderStack : StackPanel
+    {
+        private UIElement? _draggingRow;
+
+        public SortableProviderStack()
+        {
+            AllowDrop = true;
+            DragOver += OnDragOver;
+            Drop += OnDrop;
+        }
+
+        public void AttachHandle(UIElement handle, UIElement row)
+        {
+            handle.MouseLeftButtonDown += (s, e) =>
+            {
+                _draggingRow = row;
+                DragDrop.DoDragDrop(handle, row, DragDropEffects.Move);
+            };
+        }
+
+        private void OnDragOver(object sender, DragEventArgs e)
+        {
+            if (_draggingRow == null) return;
+            e.Effects = DragDropEffects.Move;
+            e.Handled = true;
+        }
+
+        private void OnDrop(object sender, DragEventArgs e)
+        {
+            if (_draggingRow == null) return;
+            var pos = e.GetPosition(this);
+            int newIndex = 0;
+            for (int i = 0; i < Children.Count; i++)
+            {
+                var child = Children[i];
+                var childPos = child.TranslatePoint(new Point(0, 0), this);
+                if (pos.Y > childPos.Y + child.RenderSize.Height / 2)
+                {
+                    newIndex = i + 1;
+                }
+            }
+            int oldIndex = Children.IndexOf(_draggingRow);
+            if (oldIndex != -1 && newIndex != oldIndex && newIndex <= Children.Count)
+            {
+                if (newIndex > oldIndex) newIndex--;
+                Children.RemoveAt(oldIndex);
+                Children.Insert(newIndex, _draggingRow);
+                ProviderVisibilityStore.Shared.MoveProvider(oldIndex, newIndex);
+            }
+            _draggingRow = null;
+        }
+    }
+
     private UIElement BuildProviders()
     {
         var stack = TabStack();
         stack.Children.Add(BuildSlotHeader());
 
-        // The "Open threads via" pickers are retired (macOS 1.6.1): threads
-        // always land back where the session lives — desktop sessions in the
-        // desktop app, CLI sessions in a terminal.
-        foreach (var provider in DisplayProviders.All)
+        var sortableHost = new SortableProviderStack();
+        foreach (var provider in ProviderVisibilityStore.Shared.Order)
         {
-            stack.Children.Add(ProviderRow(provider));
+            sortableHost.Children.Add(ProviderRow(provider, sortableHost));
         }
+        stack.Children.Add(sortableHost);
 
         var refreshPresets = RefreshIntervalStore.Presets;
         var refreshRow = new Segmented(new[] { "5m", "15m", "30m" },
@@ -1325,12 +1377,27 @@ public sealed class SettingsWindow : Window
     /// offers. Guests carry no action buttons — their only recovery is signing
     /// in with their own tool. No card chrome: separation is a hairline plus
     /// whitespace (macOS owner call, 2026-08-08: 不喜欢卡片质感).
-    private UIElement ProviderRow(DisplayProvider provider)
+    private UIElement ProviderRow(DisplayProvider provider, SortableProviderStack sortableHost)
     {
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var handle = new TextBlock
+        {
+            Text = "\uE76F", // GripperBarHorizontal
+            FontFamily = new FontFamily("Segoe MDL2 Assets"),
+            FontSize = 14,
+            Foreground = IslandColors.Brush(IslandColors.White(0.3)),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 10, 0),
+            Cursor = System.Windows.Input.Cursors.SizeAll
+        };
+        sortableHost.AttachHandle(handle, grid);
+        Grid.SetColumn(handle, 0);
+        grid.Children.Add(handle);
 
         // The real brand mark leads the row (macOS providerCard: 20pt mark
         // in a 24pt slot, 12pt gap). The brand-tinted rule on the leading
@@ -1343,7 +1410,7 @@ public sealed class SettingsWindow : Window
             VerticalAlignment = VerticalAlignment.Center,
         };
         markHost.Children.Add(ProviderMarks.Mark(provider, 20));
-        Grid.SetColumn(markHost, 0);
+        Grid.SetColumn(markHost, 1);
         grid.Children.Add(markHost);
 
         var titleRow = new StackPanel { Orientation = Orientation.Horizontal };
@@ -1386,7 +1453,7 @@ public sealed class SettingsWindow : Window
         var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         text.Children.Add(titleRow);
         text.Children.Add(status);
-        Grid.SetColumn(text, 1);
+        Grid.SetColumn(text, 2);
         grid.Children.Add(text);
 
         var trailing = new StackPanel
@@ -1431,7 +1498,7 @@ public sealed class SettingsWindow : Window
             VerticalAlignment = VerticalAlignment.Center,
         };
         trailing.Children.Add(toggle);
-        Grid.SetColumn(trailing, 2);
+        Grid.SetColumn(trailing, 3);
         grid.Children.Add(trailing);
 
         // macOS providerCard chrome: no boxes — a brand-gradient rule on the

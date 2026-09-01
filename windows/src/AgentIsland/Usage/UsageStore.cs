@@ -135,7 +135,7 @@ public sealed class UsageStore : INotifyPropertyChanged
                     null),
                 new WindowUsage(0.0 + DemoDouble("AGENTISLAND_DEMO_CLAUDE_WEEKLY", 0.81), now.AddSeconds(4 * 86400 + 11 * 3600), null),
                 "max");
-            // AGENTISLAND_DEMO_CODEX_SINGLE=1 shows Codex's July 2026 shape:
+            // AGENTISLAND_DEMO_CODEX_SINGLE=1 shows Codex's primary-only shape:
             // one weekly window, secondary gone, plus banked reset cards.
             var codexSingle = Environment.GetEnvironmentVariable("AGENTISLAND_DEMO_CODEX_SINGLE") == "1";
             Codex = codexSingle

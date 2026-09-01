@@ -25,6 +25,7 @@ namespace AgentIsland.Model;
 public sealed class ProviderVisibilityStore : INotifyPropertyChanged
 {
     private const string EnabledKey = "AgentIsland.enabledProviders.v1";
+    private const string OrderKey = "AgentIsland.providerOrder.v1";
     private const string ClaudeKey = "AgentIsland.claudeVisible";
     private const string CodexKey = "AgentIsland.codexVisible";
     private const string ClaudeTouchedKey = "AgentIsland.claudeVisibleTouched";
@@ -34,6 +35,7 @@ public sealed class ProviderVisibilityStore : INotifyPropertyChanged
 
     private readonly Dictionary<DisplayProvider, bool> _detected = new();
     private List<DisplayProvider> _enabled;
+    private IReadOnlyList<DisplayProvider> _order;
     private IReadOnlyList<DisplayProvider> _slots;
     private bool _claudeTouched;
     private bool _codexTouched;
@@ -47,31 +49,48 @@ public sealed class ProviderVisibilityStore : INotifyPropertyChanged
 
         if (AppEnvironment.IsDemo)
         {
-            // The recording rig shares the real user's settings file: pin the
-            // demo island and never write the selection back.
-            var pinned = ProviderSelection.Sanitize(DemoProviders());
+            var demoProviders = DemoProviders().ToList();
+            _order = ProviderSelection.SanitizeOrder(demoProviders);
+            var pinned = ProviderSelection.SanitizeEnabled(demoProviders, _order);
             _enabled = pinned.Count > 0
                 ? pinned
                 : new List<DisplayProvider> { DisplayProvider.Claude, DisplayProvider.Codex };
         }
-        else if (Preferences.Get<List<string>?>(EnabledKey) is { } stored)
-        {
-            _enabled = ProviderSelection.Sanitize(stored);
-        }
         else
         {
-            // First run on the slot model: carry the pre-slot toggles over so
-            // existing users keep exactly the island they had.
-            _enabled = ProviderSelection.Migrated(
-                Preferences.Get<bool?>(ClaudeKey) ?? true,
-                Preferences.Get<bool?>(CodexKey) ?? true);
+            var storedOrder = Preferences.Get<List<string>?>(OrderKey);
+            var storedEnabled = Preferences.Get<List<string>?>(EnabledKey);
+
+            if (storedOrder == null && storedEnabled != null)
+            {
+                // Migrate from enabledProviders.v1
+                _order = ProviderSelection.SanitizeOrder(storedEnabled);
+                _enabled = ProviderSelection.SanitizeEnabled(storedEnabled, _order);
+            }
+            else if (storedOrder != null && storedEnabled != null)
+            {
+                _order = ProviderSelection.SanitizeOrder(storedOrder);
+                _enabled = ProviderSelection.SanitizeEnabled(storedEnabled, _order);
+            }
+            else if (storedOrder != null)
+            {
+                _order = ProviderSelection.SanitizeOrder(storedOrder);
+                _enabled = new List<DisplayProvider>();
+            }
+            else
+            {
+                // First run on the slot model
+                var migratedEnabled = ProviderSelection.Migrated(
+                    Preferences.Get<bool?>(ClaudeKey) ?? true,
+                    Preferences.Get<bool?>(CodexKey) ?? true);
+                _order = ProviderSelection.SanitizeOrder(migratedEnabled.Select(p => p.RawValue()));
+                _enabled = ProviderSelection.SanitizeEnabled(migratedEnabled.Select(p => p.RawValue()), _order);
+            }
             Persist();
         }
 
         foreach (var provider in DisplayProviders.All)
         {
-            // Demo has no footprint to find on the recording machine, so the
-            // pinned selection renders as-is.
             _detected[provider] = AppEnvironment.IsDemo ? _enabled.Contains(provider) : Probe(provider);
         }
 
@@ -79,6 +98,8 @@ public sealed class ProviderVisibilityStore : INotifyPropertyChanged
     }
 
     // MARK: - Selection
+
+    public IReadOnlyList<DisplayProvider> Order => _order;
 
     /// The providers bound to the island slots, canonical order, max 2.
     public IReadOnlyList<DisplayProvider> Enabled => _enabled;
@@ -91,13 +112,27 @@ public sealed class ProviderVisibilityStore : INotifyPropertyChanged
     /// a third provider on — nothing changes and the caller explains why.
     public bool Toggle(DisplayProvider provider)
     {
-        if (!ProviderSelection.TryToggle(_enabled, provider, out var next)) return false;
+        if (!ProviderSelection.TryToggle(_enabled, provider, _order, out var next)) return false;
         _enabled = next;
         MarkTouched(provider);
         Persist();
         _slots = ComputeSlots();
         RaiseAll();
         return true;
+    }
+
+    public void MoveProvider(int oldIndex, int newIndex)
+    {
+        var list = _order.ToList();
+        var item = list[oldIndex];
+        list.RemoveAt(oldIndex);
+        list.Insert(newIndex, item);
+        _order = list;
+        // Re-evaluate enabled to match new order
+        _enabled = ProviderSelection.SanitizeEnabled(_enabled.Select(p => p.RawValue()), _order);
+        Persist();
+        _slots = ComputeSlots();
+        RaiseAll();
     }
 
     /// Set membership explicitly. Returns false only when turning a third
@@ -258,6 +293,7 @@ public sealed class ProviderVisibilityStore : INotifyPropertyChanged
     private void Persist()
     {
         if (AppEnvironment.IsDemo) return;
+        Preferences.Set(OrderKey, _order.Select(provider => provider.RawValue()).ToList());
         Preferences.Set(EnabledKey, _enabled.Select(provider => provider.RawValue()).ToList());
         // Keep the pre-slot keys in step. They are what an older build reads,
         // and the updater can roll one back onto the same settings file.

@@ -4,10 +4,10 @@ using AgentIsland.UI;
 
 namespace AgentIsland.Tests;
 
-/// Pins the solo-split geometry (macOS 9ee4219): a lone visible provider
-/// never narrows the bar — the full symmetric width stays (logo takes one
-/// flank, the usage number the other), in both placements. SoloProvider
-/// reports which side is alone; both-visible and both-hidden report null.
+/// Pins the solo-split geometry: a lone visible provider
+/// never narrows the bar — the full symmetric width stays.
+/// SoloProvider reports which tool is alone; both-visible and both-hidden report null.
+/// A single pick is always left-justified.
 public static class SoloCenterLayoutTests
 {
     public static void RunAll()
@@ -25,6 +25,10 @@ public static class SoloCenterLayoutTests
         {
             position.Placement = IslandPlacement.TopBar;
             alwaysShow.Enabled = false;
+            foreach (var provider in DisplayProviders.All)
+            {
+                visibility.SetEnabled(provider, false);
+            }
             visibility.ClaudeVisible = true;
             visibility.CodexVisible = true;
 
@@ -40,8 +44,8 @@ public static class SoloCenterLayoutTests
             visibility.CodexVisible = true;
             visibility.ClaudeVisible = false;
             Expect(model.SoloProvider == TriggerTool.Codex && model.Size.Width == 276,
-                "solo is side-agnostic and width-stable");
-            Console.WriteLine("PASS solo is side-agnostic");
+                "a single pick is always left-justified and width-stable");
+            Console.WriteLine("PASS solo is left-justified");
 
             visibility.CodexVisible = false;
             Expect(model.SoloProvider is null, "both hidden is not solo");

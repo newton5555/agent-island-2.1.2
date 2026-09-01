@@ -59,8 +59,7 @@ public sealed class NotchPeekPill : TextBlock
             ? CompactCountdown(resetAt - now)
             : null;
         var mirrored = _tool == Core.TriggerTool.Codex;
-        // The no-countdown placeholder names the window's REAL period —
-        // Codex's primary slot has been a weekly window since July 2026.
+        // The no-countdown placeholder names the window's REAL period.
         var periodTag = Charts.ChartTile.PeriodLabel(usage, "5h");
 
         if (mirrored)

@@ -24,11 +24,11 @@ public partial class IslandWindow : Window
     // events (placement/usage/alert) forever.
     private readonly List<Action> _teardown = new();
     private bool _hovering;
-    private System.Windows.Controls.StackPanel? _claudeTitle;
-    private System.Windows.Controls.StackPanel? _codexTitle;
+    private System.Windows.Controls.StackPanel? _leftTitle;
+    private System.Windows.Controls.StackPanel? _rightTitle;
     private ResetCardChip? _resetCards;
-    private System.Windows.Controls.TextBlock? _claudeChip;
-    private System.Windows.Controls.TextBlock? _codexChip;
+    private System.Windows.Controls.TextBlock? _leftChip;
+    private System.Windows.Controls.TextBlock? _rightChip;
 
     /// What the two physical flanks currently carry. Any two of the five
     /// providers can hold the slots (任选两家) — the elements keep their
@@ -39,10 +39,10 @@ public partial class IslandWindow : Window
     public IslandWindow()
     {
         InitializeComponent();
-        ClaudeLogo.Tool = TriggerTool.Claude;
-        CodexLogo.Tool = TriggerTool.Codex;
-        ClaudePill.Tool = TriggerTool.Claude;
-        CodexPill.Tool = TriggerTool.Codex;
+        LeftLogo.Tool = TriggerTool.Claude;
+        RightLogo.Tool = TriggerTool.Codex;
+        LeftPill.Tool = TriggerTool.Claude;
+        RightPill.Tool = TriggerTool.Codex;
         Loaded += OnLoaded;
     }
 
@@ -202,35 +202,18 @@ public partial class IslandWindow : Window
     private void ApplyProviderVisibility()
     {
         var slots = Model.ProviderVisibilityStore.Shared.Slots;
-        if (slots.Count >= 2)
-        {
-            _leftTool = slots[0].ToTriggerTool();
-            _rightTool = slots[1].ToTriggerTool();
-        }
-        else if (slots.Count == 1)
-        {
-            // Solo keeps the provider on its home flank (macOS
-            // SoloLogoFlankIsLeading): Claude/Antigravity/Cursor lead left,
-            // Codex/Grok sit right.
-            var only = slots[0];
-            _leftTool = only.SoloLogoFlankIsLeading() ? only.ToTriggerTool() : null;
-            _rightTool = only.SoloLogoFlankIsLeading() ? null : only.ToTriggerTool();
-        }
-        else
-        {
-            _leftTool = null;
-            _rightTool = null;
-        }
+        _leftTool = slots.Count > 0 ? slots[0].ToTriggerTool() : null;
+        _rightTool = slots.Count > 1 ? slots[1].ToTriggerTool() : null;
 
-        if (_leftTool is { } left) ClaudeLogo.Tool = left;
-        if (_rightTool is { } right) CodexLogo.Tool = right;
+        if (_leftTool is { } left) LeftLogo.Tool = left;
+        if (_rightTool is { } right) RightLogo.Tool = right;
         // The logo's fixed grid column reserves its slot either way, so we
         // fade opacity (the macOS openMorph spring) rather than hard-toggle
         // Visibility — toggling a provider springs the mark in/out.
-        FadeLogo(ClaudeLogo, _leftTool is not null);
-        FadeLogo(CodexLogo, _rightTool is not null);
-        RetitleFlank(_claudeTitle, _leftTool);
-        RetitleFlank(_codexTitle, _rightTool);
+        FadeLogo(LeftLogo, _leftTool is not null);
+        FadeLogo(RightLogo, _rightTool is not null);
+        RetitleFlank(_leftTitle, _leftTool);
+        RetitleFlank(_rightTitle, _rightTool);
         ApplySoloSplit();
         UpdatePlanChips();
         UpdatePills();
@@ -273,16 +256,16 @@ public partial class IslandWindow : Window
 
         // Titles live in the center column, hugging the logo tabs on each
         // side — the macOS PanelHeader arrangement.
-        (_claudeTitle, _claudeChip) = MakeProviderTitle("Claude");
-        _claudeTitle.HorizontalAlignment = HorizontalAlignment.Left;
-        _claudeTitle.Margin = new Thickness(8, 0, 0, 0);
-        System.Windows.Controls.Grid.SetColumn(_claudeTitle, 2);
-        TopStrip.Children.Add(_claudeTitle);
+        (_leftTitle, _leftChip) = MakeProviderTitle("Claude");
+        _leftTitle.HorizontalAlignment = HorizontalAlignment.Left;
+        _leftTitle.Margin = new Thickness(8, 0, 0, 0);
+        System.Windows.Controls.Grid.SetColumn(_leftTitle, 2);
+        TopStrip.Children.Add(_leftTitle);
 
-        (_codexTitle, _codexChip) = MakeProviderTitle("Codex");
-        _codexTitle.HorizontalAlignment = HorizontalAlignment.Right;
-        _codexTitle.Margin = new Thickness(0, 0, 8, 0);
-        System.Windows.Controls.Grid.SetColumn(_codexTitle, 2);
+        (_rightTitle, _rightChip) = MakeProviderTitle("Codex");
+        _rightTitle.HorizontalAlignment = HorizontalAlignment.Right;
+        _rightTitle.Margin = new Thickness(0, 0, 8, 0);
+        System.Windows.Controls.Grid.SetColumn(_rightTitle, 2);
         // Banked-reset count ("reset cards") — the escape hatches of the
         // weekly-only quota era. Always shown, ×0 included, in the dead
         // space left of the title; click for per-card expiry.
@@ -297,8 +280,8 @@ public partial class IslandWindow : Window
                 SetState(IslandState.Compact);
             }
         });
-        _codexTitle.Children.Insert(0, _resetCards);
-        TopStrip.Children.Add(_codexTitle);
+        _rightTitle.Children.Insert(0, _resetCards);
+        TopStrip.Children.Add(_rightTitle);
 
         System.ComponentModel.PropertyChangedEventHandler onPlanChips =
             (_, _) => Dispatcher.BeginInvoke(UpdatePlanChips);
@@ -375,8 +358,8 @@ public partial class IslandWindow : Window
 
     private void UpdatePlanChips()
     {
-        UpdateChip(_claudeChip, _leftTool is { } l ? UsagePage.UsageFor(l.ToDisplayProvider()).Plan : null);
-        UpdateChip(_codexChip, _rightTool is { } r ? UsagePage.UsageFor(r.ToDisplayProvider()).Plan : null);
+        UpdateChip(_leftChip, _leftTool is { } l ? UsagePage.UsageFor(l.ToDisplayProvider()).Plan : null);
+        UpdateChip(_rightChip, _rightTool is { } r ? UsagePage.UsageFor(r.ToDisplayProvider()).Plan : null);
         if (_resetCards is not null)
         {
             // The banked-reset chip is Codex data living inside the right
@@ -825,8 +808,8 @@ public partial class IslandWindow : Window
         Sweep.CornerRadius = ShapeRadius(_model.CornerRadius + 2);
         SetColumnInstant(LeftPillColumn, PillSlotTarget());
         SetColumnInstant(RightPillColumn, PillSlotTarget());
-        SetColumnInstant(ClaudeTabColumn, IslandModel.TabWidth);
-        SetColumnInstant(CodexTabColumn, IslandModel.TabWidth);
+        SetColumnInstant(LeftTabColumn, IslandModel.TabWidth);
+        SetColumnInstant(RightTabColumn, IslandModel.TabWidth);
         ApplySoloSplit();
     }
 
@@ -871,8 +854,8 @@ public partial class IslandWindow : Window
 
     private void AnimateTabColumns(bool open)
     {
-        AnimateColumn(ClaudeTabColumn, IslandModel.TabWidth, open);
-        AnimateColumn(CodexTabColumn, IslandModel.TabWidth, open);
+        AnimateColumn(LeftTabColumn, IslandModel.TabWidth, open);
+        AnimateColumn(RightTabColumn, IslandModel.TabWidth, open);
     }
 
     /// Solo split (macOS 9ee4219): with one subscription the collapsed bar
@@ -892,56 +875,56 @@ public partial class IslandWindow : Window
         // left slot, tucked to the edge.
         if (leftSolo && slotted)
         {
-            System.Windows.Controls.Grid.SetColumn(ClaudeLogo, 0);
-            ClaudeLogo.HorizontalAlignment = HorizontalAlignment.Left;
-            ClaudeLogo.Margin = new Thickness(14, 0, 0, 0);
+            System.Windows.Controls.Grid.SetColumn(LeftLogo, 0);
+            LeftLogo.HorizontalAlignment = HorizontalAlignment.Left;
+            LeftLogo.Margin = new Thickness(14, 0, 0, 0);
         }
         else
         {
-            System.Windows.Controls.Grid.SetColumn(ClaudeLogo, 1);
-            ClaudeLogo.HorizontalAlignment = HorizontalAlignment.Center;
-            ClaudeLogo.Margin = new Thickness(0);
+            System.Windows.Controls.Grid.SetColumn(LeftLogo, 1);
+            LeftLogo.HorizontalAlignment = HorizontalAlignment.Center;
+            LeftLogo.Margin = new Thickness(0);
         }
 
         if (rightSolo && slotted)
         {
-            System.Windows.Controls.Grid.SetColumn(CodexLogo, 4);
-            CodexLogo.HorizontalAlignment = HorizontalAlignment.Right;
-            CodexLogo.Margin = new Thickness(0, 0, 14, 0);
+            System.Windows.Controls.Grid.SetColumn(RightLogo, 4);
+            RightLogo.HorizontalAlignment = HorizontalAlignment.Right;
+            RightLogo.Margin = new Thickness(0, 0, 14, 0);
         }
         else
         {
-            System.Windows.Controls.Grid.SetColumn(CodexLogo, 3);
-            CodexLogo.HorizontalAlignment = HorizontalAlignment.Center;
-            CodexLogo.Margin = new Thickness(0);
+            System.Windows.Controls.Grid.SetColumn(RightLogo, 3);
+            RightLogo.HorizontalAlignment = HorizontalAlignment.Center;
+            RightLogo.Margin = new Thickness(0);
         }
 
         // Pills: the solo provider's number crosses to the opposite flank;
         // duo keeps each pill outboard of its own logo.
         if (leftSolo)
         {
-            System.Windows.Controls.Grid.SetColumn(ClaudePill, 4);
-            ClaudePill.HorizontalAlignment = HorizontalAlignment.Right;
-            ClaudePill.Margin = new Thickness(6, 0, 14, 0);
+            System.Windows.Controls.Grid.SetColumn(LeftPill, 4);
+            LeftPill.HorizontalAlignment = HorizontalAlignment.Right;
+            LeftPill.Margin = new Thickness(6, 0, 14, 0);
         }
         else
         {
-            System.Windows.Controls.Grid.SetColumn(ClaudePill, 0);
-            ClaudePill.HorizontalAlignment = HorizontalAlignment.Left;
-            ClaudePill.Margin = new Thickness(14, 0, 6, 0);
+            System.Windows.Controls.Grid.SetColumn(LeftPill, 0);
+            LeftPill.HorizontalAlignment = HorizontalAlignment.Left;
+            LeftPill.Margin = new Thickness(14, 0, 6, 0);
         }
 
         if (rightSolo)
         {
-            System.Windows.Controls.Grid.SetColumn(CodexPill, 0);
-            CodexPill.HorizontalAlignment = HorizontalAlignment.Left;
-            CodexPill.Margin = new Thickness(14, 0, 6, 0);
+            System.Windows.Controls.Grid.SetColumn(RightPill, 0);
+            RightPill.HorizontalAlignment = HorizontalAlignment.Left;
+            RightPill.Margin = new Thickness(14, 0, 6, 0);
         }
         else
         {
-            System.Windows.Controls.Grid.SetColumn(CodexPill, 4);
-            CodexPill.HorizontalAlignment = HorizontalAlignment.Right;
-            CodexPill.Margin = new Thickness(6, 0, 14, 0);
+            System.Windows.Controls.Grid.SetColumn(RightPill, 4);
+            RightPill.HorizontalAlignment = HorizontalAlignment.Right;
+            RightPill.Margin = new Thickness(6, 0, 14, 0);
         }
     }
 
@@ -969,8 +952,8 @@ public partial class IslandWindow : Window
                 EasingMode = visible ? EasingMode.EaseOut : EasingMode.EaseIn,
             },
         };
-        ClaudePill.BeginAnimation(OpacityProperty, fade);
-        CodexPill.BeginAnimation(OpacityProperty, fade.Clone());
+        LeftPill.BeginAnimation(OpacityProperty, fade);
+        RightPill.BeginAnimation(OpacityProperty, fade.Clone());
     }
 
     private void ShowExpandedContent()
@@ -990,11 +973,11 @@ public partial class IslandWindow : Window
         };
         ExpandedContent.BeginAnimation(OpacityProperty, fade);
         ContentSlide.BeginAnimation(TranslateTransform.YProperty, slide);
-        _claudeTitle?.BeginAnimation(OpacityProperty, fade.Clone());
-        _codexTitle?.BeginAnimation(OpacityProperty, fade.Clone());
+        _leftTitle?.BeginAnimation(OpacityProperty, fade.Clone());
+        _rightTitle?.BeginAnimation(OpacityProperty, fade.Clone());
         // The titles are built hit-test-off so the invisible strip never eats
         // bar clicks; expanded they host a real control (the reset-card chip).
-        if (_codexTitle is not null) _codexTitle.IsHitTestVisible = true;
+        if (_rightTitle is not null) _rightTitle.IsHitTestVisible = true;
         SettingsGear.BeginAnimation(OpacityProperty, fade.Clone());
     }
 
@@ -1015,9 +998,9 @@ public partial class IslandWindow : Window
             }
         };
         ExpandedContent.BeginAnimation(OpacityProperty, fade);
-        _claudeTitle?.BeginAnimation(OpacityProperty, fade.Clone());
-        _codexTitle?.BeginAnimation(OpacityProperty, fade.Clone());
-        if (_codexTitle is not null) _codexTitle.IsHitTestVisible = false;
+        _leftTitle?.BeginAnimation(OpacityProperty, fade.Clone());
+        _rightTitle?.BeginAnimation(OpacityProperty, fade.Clone());
+        if (_rightTitle is not null) _rightTitle.IsHitTestVisible = false;
         SettingsGear.BeginAnimation(OpacityProperty, fade.Clone());
     }
 
@@ -1038,8 +1021,8 @@ public partial class IslandWindow : Window
     private void UpdateActivityVisuals()
     {
         var monitor = ActivityMonitor.Shared;
-        ClaudeLogo.SetState(monitor.Claude);
-        CodexLogo.SetState(monitor.Codex);
+        if (_leftTool is { } l) LeftLogo.SetState(monitor.StateFor(l));
+        if (_rightTool is { } r) RightLogo.SetState(monitor.StateFor(r));
         UpdateHalo();
     }
 
@@ -1223,14 +1206,14 @@ public partial class IslandWindow : Window
         var engine = Model.AlertEngine.Shared;
         if (_leftTool is { } leftTool)
         {
-            ClaudePill.Update(
+            LeftPill.Update(
                 UsagePage.UsageFor(leftTool.ToDisplayProvider()).FiveHour,
                 store.Loading,
                 engine.SeverityFor(leftTool));
         }
         if (_rightTool is { } rightTool)
         {
-            CodexPill.Update(
+            RightPill.Update(
                 UsagePage.UsageFor(rightTool.ToDisplayProvider()).FiveHour,
                 store.Loading,
                 engine.SeverityFor(rightTool));
@@ -1243,17 +1226,17 @@ public partial class IslandWindow : Window
         var alwaysShow = AlwaysShowUsageStore.Shared.Enabled && _model.State == IslandState.Compact;
         if (_model.State == IslandState.Peek || alwaysShow)
         {
-            ClaudePill.BeginAnimation(OpacityProperty, null);
-            CodexPill.BeginAnimation(OpacityProperty, null);
-            ClaudePill.Opacity = _leftTool is not null ? 1 : 0;
-            CodexPill.Opacity = _rightTool is not null ? 1 : 0;
+            LeftPill.BeginAnimation(OpacityProperty, null);
+            RightPill.BeginAnimation(OpacityProperty, null);
+            LeftPill.Opacity = _leftTool is not null ? 1 : 0;
+            RightPill.Opacity = _rightTool is not null ? 1 : 0;
         }
         else if (_model.State == IslandState.Compact)
         {
-            ClaudePill.BeginAnimation(OpacityProperty, null);
-            CodexPill.BeginAnimation(OpacityProperty, null);
-            ClaudePill.Opacity = 0;
-            CodexPill.Opacity = 0;
+            LeftPill.BeginAnimation(OpacityProperty, null);
+            RightPill.BeginAnimation(OpacityProperty, null);
+            LeftPill.Opacity = 0;
+            RightPill.Opacity = 0;
         }
     }
 
