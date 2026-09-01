@@ -70,27 +70,29 @@ public sealed class ChartFoot : TextBlock
     }
 }
 
-/// 30-cell segmented meter, the signature look from the product
-/// screenshots. Filled cells take the provider color; a value change sweeps
-/// across cells with a ~7ms stagger (~210ms full sweep).
+/// 30-cell segmented meter with dual tracks:
+/// - Upper row: Quota cells in provider/urgency color.
+/// - Lower row: Remaining reset time micro-segments in glowing LiveTeal green.
 public sealed class SteppedMeter : Grid
 {
-    /// Fixed tick PITCH, variable count: a tile that spans the full block
-    /// (Codex's single weekly window) draws ~2x thin ticks at the same
-    /// density instead of stretching 30 into fat battery blocks. 30 ticks
-    /// over the standard half-block tile ≈ 4px per tick.
     private const double TickPitch = 4.0;
     private const int MinSegments = 10;
 
     private Rectangle[] _cells = Array.Empty<Rectangle>();
+    private Rectangle[] _timeCells = Array.Empty<Rectangle>();
     private readonly Color _color;
     private double _lastFilled = -1;
     private double _lastValue;
+    private double _lastTimeFilled = -1;
+    private double _lastTimeRatio;
 
     public SteppedMeter(Color color)
     {
         _color = color;
-        Height = 16;
+        Height = 18;
+        RowDefinitions.Add(new RowDefinition { Height = new GridLength(10, GridUnitType.Pixel) });
+        RowDefinitions.Add(new RowDefinition { Height = new GridLength(2.5, GridUnitType.Pixel) });
+        RowDefinitions.Add(new RowDefinition { Height = new GridLength(3.5, GridUnitType.Pixel) });
         SizeChanged += (_, e) => Rebuild(e.NewSize.Width);
     }
 
@@ -100,10 +102,18 @@ public sealed class SteppedMeter : Grid
         if (count == _cells.Length) return;
         Children.Clear();
         ColumnDefinitions.Clear();
-        _cells = new Rectangle[count];
+
         for (var i = 0; i < count; i++)
         {
             ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        }
+
+        _cells = new Rectangle[count];
+        _timeCells = new Rectangle[count];
+
+        for (var i = 0; i < count; i++)
+        {
+            // Upper row: Quota
             var cell = new Rectangle
             {
                 RadiusX = 1.5,
@@ -111,97 +121,197 @@ public sealed class SteppedMeter : Grid
                 Margin = new Thickness(i == 0 ? 0 : 1, 0, i == count - 1 ? 0 : 1, 0),
                 Fill = IslandColors.Brush(IslandColors.White(0.10)),
             };
+            SetRow(cell, 0);
             SetColumn(cell, i);
             _cells[i] = cell;
             Children.Add(cell);
+
+            // Lower row: Reset time remaining
+            var timeCell = new Rectangle
+            {
+                RadiusX = 1.0,
+                RadiusY = 1.0,
+                Margin = new Thickness(i == 0 ? 0 : 1, 0, i == count - 1 ? 0 : 1, 0),
+                Fill = IslandColors.Brush(IslandColors.White(0.04)),
+            };
+            SetRow(timeCell, 2);
+            SetColumn(timeCell, i);
+            _timeCells[i] = timeCell;
+            Children.Add(timeCell);
         }
-        // Repaint at the new density without the fill sweep — a resize is a
-        // relayout, not a data change.
+
         _lastFilled = -1;
+        _lastTimeFilled = -1;
         var filledNow = Math.Floor(_lastValue / 100 * count);
+        var timeFilledNow = Math.Floor(_lastTimeRatio * count);
         for (var i = 0; i < count; i++)
         {
             _cells[i].Fill = IslandColors.Brush(i < filledNow ? _color : IslandColors.White(0.10));
+            _timeCells[i].Fill = IslandColors.Brush(i < timeFilledNow ? IslandColors.LiveTeal : IslandColors.White(0.04));
         }
         _lastFilled = filledNow;
+        _lastTimeFilled = timeFilledNow;
     }
 
-    public void Update(double value)
+    public void Update(double value, WindowUsage? window = null)
     {
         _lastValue = value;
         var segments = _cells.Length;
-        if (segments == 0) return; // first layout pass hasn't sized us yet
+        if (segments == 0) return;
+
         var filled = Math.Floor(value / 100 * segments);
-        if (Math.Abs(filled - _lastFilled) < 0.5 && _lastFilled >= 0)
+        if (Math.Abs(filled - _lastFilled) >= 0.5 || _lastFilled < 0)
         {
-            return;
-        }
-        _lastFilled = filled;
-        // Sweep stagger scales to the count so the fill wave crosses a wide
-        // tile in the same ~210ms it crosses a half-block one.
-        var stagger = 210.0 / segments;
-        for (var i = 0; i < segments; i++)
-        {
-            var target = i < filled ? _color : IslandColors.White(0.10);
-            var brush = new SolidColorBrush(((SolidColorBrush)_cells[i].Fill).Color);
-            _cells[i].Fill = brush;
-            var animation = new ColorAnimation(target, IslandAnimations.StrongEaseOutDuration)
+            _lastFilled = filled;
+            var stagger = 210.0 / segments;
+            for (var i = 0; i < segments; i++)
             {
-                BeginTime = TimeSpan.FromMilliseconds(i * stagger),
-                EasingFunction = IslandAnimations.StrongEaseOut(),
-            };
-            brush.BeginAnimation(SolidColorBrush.ColorProperty, animation);
+                var target = i < filled ? _color : IslandColors.White(0.10);
+                var brush = new SolidColorBrush(((SolidColorBrush)_cells[i].Fill).Color);
+                _cells[i].Fill = brush;
+                var animation = new ColorAnimation(target, IslandAnimations.StrongEaseOutDuration)
+                {
+                    BeginTime = TimeSpan.FromMilliseconds(i * stagger),
+                    EasingFunction = IslandAnimations.StrongEaseOut(),
+                };
+                brush.BeginAnimation(SolidColorBrush.ColorProperty, animation);
+            }
+        }
+
+        double remainingRatio = 0;
+        if (window is { ResetAt: { } resetAt } && resetAt > DateTimeOffset.Now)
+        {
+            double periodSeconds = window.PeriodSeconds is { } p && p > 0
+                ? p
+                : (window.IsLongPeriod ? 7 * 86400 : 5 * 3600);
+            var remainingSeconds = (resetAt - DateTimeOffset.Now).TotalSeconds;
+            remainingRatio = Math.Clamp(remainingSeconds / periodSeconds, 0, 1.0);
+        }
+        _lastTimeRatio = remainingRatio;
+
+        var timeFilled = Math.Floor(remainingRatio * segments);
+        if (Math.Abs(timeFilled - _lastTimeFilled) >= 0.5 || _lastTimeFilled < 0)
+        {
+            _lastTimeFilled = timeFilled;
+            var stagger = 180.0 / segments;
+            for (var i = 0; i < segments; i++)
+            {
+                var target = i < timeFilled ? IslandColors.LiveTeal : IslandColors.White(0.04);
+                var brush = new SolidColorBrush(((SolidColorBrush)_timeCells[i].Fill).Color);
+                _timeCells[i].Fill = brush;
+                var animation = new ColorAnimation(target, IslandAnimations.StrongEaseOutDuration)
+                {
+                    BeginTime = TimeSpan.FromMilliseconds(i * stagger),
+                    EasingFunction = IslandAnimations.StrongEaseOut(),
+                };
+                brush.BeginAnimation(SolidColorBrush.ColorProperty, animation);
+            }
         }
     }
 }
 
-/// Thin capsule progress bar with quartile ticks (the "Bar" style).
-public sealed class CapsuleMeter : Grid
+/// Dual capsule progress bar with quartile ticks:
+/// - Upper capsule: Quota in brand/urgency color.
+/// - Lower capsule: Remaining reset time in glowing LiveTeal green.
+public sealed class CapsuleMeter : StackPanel
 {
     private readonly Border _fill;
+    private readonly Border _timeFill;
+    private readonly Grid _trackGrid;
+    private readonly Grid _timeTrackGrid;
     private double _value;
+    private double _timeRatio;
 
     public CapsuleMeter(Color color)
     {
-        Height = 8;
+        Orientation = Orientation.Vertical;
+        Height = 16;
+
+        // 1. Quota Track & Fill
+        _trackGrid = new Grid { Height = 4.5, VerticalAlignment = VerticalAlignment.Center };
         var track = new Border
         {
-            Height = 4,
-            CornerRadius = new CornerRadius(2),
-            Background = IslandColors.Brush(IslandColors.White(0.06)),
-            VerticalAlignment = VerticalAlignment.Center,
+            Height = 4.5,
+            CornerRadius = new CornerRadius(2.25),
+            Background = IslandColors.Brush(IslandColors.White(0.08)),
         };
         _fill = new Border
         {
-            Height = 4,
-            CornerRadius = new CornerRadius(2),
+            Height = 4.5,
+            CornerRadius = new CornerRadius(2.25),
             Background = IslandColors.Brush(color),
             HorizontalAlignment = HorizontalAlignment.Left,
-            VerticalAlignment = VerticalAlignment.Center,
             Width = 0,
         };
-        Children.Add(track);
-        Children.Add(_fill);
+        _trackGrid.Children.Add(track);
+        _trackGrid.Children.Add(_fill);
+
         for (var quartile = 1; quartile <= 3; quartile++)
         {
             var tick = new Rectangle
             {
                 Width = 1,
-                Height = 8,
+                Height = 4.5,
                 Fill = IslandColors.Brush(IslandColors.White(0.12)),
                 HorizontalAlignment = HorizontalAlignment.Left,
             };
             var p = quartile * 0.25;
-            SizeChanged += (_, _) => tick.Margin = new Thickness(ActualWidth * p, 0, 0, 0);
-            Children.Add(tick);
+            _trackGrid.SizeChanged += (_, _) => tick.Margin = new Thickness(_trackGrid.ActualWidth * p, 0, 0, 0);
+            _trackGrid.Children.Add(tick);
         }
-        SizeChanged += (_, _) => ApplyWidth(animate: false);
+
+        // 2. Reset Time Track & Fill (Glowing LiveTeal Green)
+        _timeTrackGrid = new Grid { Height = 2.5, Margin = new Thickness(0, 3.5, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        var timeTrack = new Border
+        {
+            Height = 2.5,
+            CornerRadius = new CornerRadius(1.25),
+            Background = IslandColors.Brush(IslandColors.White(0.04)),
+        };
+        _timeFill = new Border
+        {
+            Height = 2.5,
+            CornerRadius = new CornerRadius(1.25),
+            Background = IslandColors.Brush(IslandColors.LiveTeal),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Width = 0,
+            Effect = new System.Windows.Media.Effects.DropShadowEffect
+            {
+                ShadowDepth = 0,
+                BlurRadius = 3,
+                Color = IslandColors.LiveTeal,
+                Opacity = 0.45,
+            },
+        };
+        _timeTrackGrid.Children.Add(timeTrack);
+        _timeTrackGrid.Children.Add(_timeFill);
+
+        Children.Add(_trackGrid);
+        Children.Add(_timeTrackGrid);
+
+        SizeChanged += (_, _) =>
+        {
+            ApplyWidth(animate: false);
+            ApplyTimeWidth(animate: false);
+        };
     }
 
-    public void Update(double value)
+    public void Update(double value, WindowUsage? window = null)
     {
         _value = value;
         ApplyWidth(animate: true);
+
+        double remainingRatio = 0;
+        if (window is { ResetAt: { } resetAt } && resetAt > DateTimeOffset.Now)
+        {
+            double periodSeconds = window.PeriodSeconds is { } p && p > 0
+                ? p
+                : (window.IsLongPeriod ? 7 * 86400 : 5 * 3600);
+            var remainingSeconds = (resetAt - DateTimeOffset.Now).TotalSeconds;
+            remainingRatio = Math.Clamp(remainingSeconds / periodSeconds, 0, 1.0);
+        }
+        _timeRatio = remainingRatio;
+        ApplyTimeWidth(animate: true);
     }
 
     private void ApplyWidth(bool animate)
@@ -218,6 +328,22 @@ public sealed class CapsuleMeter : Grid
             EasingFunction = IslandAnimations.StrongEaseOut(),
         };
         _fill.BeginAnimation(WidthProperty, animation);
+    }
+
+    private void ApplyTimeWidth(bool animate)
+    {
+        var target = Math.Max(0, ActualWidth * _timeRatio);
+        if (!animate)
+        {
+            _timeFill.BeginAnimation(WidthProperty, null);
+            _timeFill.Width = target;
+            return;
+        }
+        var animation = new DoubleAnimation(target, IslandAnimations.StrongEaseOutDuration)
+        {
+            EasingFunction = IslandAnimations.StrongEaseOut(),
+        };
+        _timeFill.BeginAnimation(WidthProperty, animation);
     }
 }
 
@@ -433,15 +559,18 @@ public sealed class RingMeter : Grid
         ArcGeometry(new Point(diameter / 2, diameter / 2), (diameter - stroke) / 2, sweepDegrees);
 }
 
-/// Numbers-first style: oversized percent over a thin glowing brand meter,
-/// then the window label (macOS numbers: 38pt hero, 3pt capsule).
+/// Numbers-first style: oversized percent over dual thin glowing brand & reset meters,
+/// then the window label (macOS numbers: 38pt hero, 3pt capsule + 2pt time track).
 public sealed class NumericMeter : StackPanel
 {
     private readonly TextBlock _value;
     private readonly TextBlock _label;
     private readonly Border _meterFill;
+    private readonly Border _timeFill;
     private readonly Grid _meter;
+    private readonly Grid _timeMeter;
     private double _fraction;
+    private double _timeFraction;
 
     public NumericMeter(Color color)
     {
@@ -452,7 +581,9 @@ public sealed class NumericMeter : StackPanel
             FontSize = 38,
             FontWeight = FontWeights.SemiBold,
         };
-        _meter = new Grid { Height = 3, Margin = new Thickness(1, 5, 8, 0) };
+
+        // 1. Quota Bar (Height 3)
+        _meter = new Grid { Height = 3, Margin = new Thickness(1, 4, 8, 0) };
         _meter.Children.Add(new Border
         {
             CornerRadius = new CornerRadius(1.5),
@@ -473,21 +604,50 @@ public sealed class NumericMeter : StackPanel
             },
         };
         _meter.Children.Add(_meterFill);
+
+        // 2. Reset Time Bar (Height 2, Margin Top 2.5)
+        _timeMeter = new Grid { Height = 2, Margin = new Thickness(1, 2.5, 8, 0) };
+        _timeMeter.Children.Add(new Border
+        {
+            CornerRadius = new CornerRadius(1),
+            Background = IslandColors.Brush(IslandColors.White(0.04)),
+        });
+        _timeFill = new Border
+        {
+            CornerRadius = new CornerRadius(1),
+            Background = IslandColors.Brush(IslandColors.LiveTeal),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Width = 0,
+            Effect = new System.Windows.Media.Effects.DropShadowEffect
+            {
+                ShadowDepth = 0,
+                BlurRadius = 3,
+                Color = IslandColors.LiveTeal,
+                Opacity = 0.45,
+            },
+        };
+        _timeMeter.Children.Add(_timeFill);
+
         _label = new TextBlock
         {
             FontFamily = IslandFonts.Ui,
             FontSize = 11,
             FontWeight = FontWeights.Medium,
             Foreground = IslandColors.Brush(IslandColors.White(0.55)),
-            Margin = new Thickness(1, 4, 0, 0),
+            Margin = new Thickness(1, 3, 0, 0),
         };
         Children.Add(_value);
         Children.Add(_meter);
+        Children.Add(_timeMeter);
         Children.Add(_label);
-        _meter.SizeChanged += (_, _) => ApplyMeter(animate: false);
+        _meter.SizeChanged += (_, _) =>
+        {
+            ApplyMeter(animate: false);
+            ApplyTimeMeter(animate: false);
+        };
     }
 
-    public void Update(string label, double value)
+    public void Update(string label, double value, WindowUsage? window = null)
     {
         _value.Inlines.Clear();
         _value.Inlines.Add(new System.Windows.Documents.Run($"{(int)value}")
@@ -498,10 +658,23 @@ public sealed class NumericMeter : StackPanel
         {
             FontSize = 14,
             Foreground = IslandColors.Brush(IslandColors.White(0.5)),
+            FontWeight = FontWeights.Medium,
         });
         _label.Text = label.ToLowerInvariant();
         _fraction = Math.Clamp(value / 100, 0, 1);
         ApplyMeter(animate: true);
+
+        double remainingRatio = 0;
+        if (window is { ResetAt: { } resetAt } && resetAt > DateTimeOffset.Now)
+        {
+            double periodSeconds = window.PeriodSeconds is { } p && p > 0
+                ? p
+                : (window.IsLongPeriod ? 7 * 86400 : 5 * 3600);
+            var remainingSeconds = (resetAt - DateTimeOffset.Now).TotalSeconds;
+            remainingRatio = Math.Clamp(remainingSeconds / periodSeconds, 0, 1.0);
+        }
+        _timeFraction = remainingRatio;
+        ApplyTimeMeter(animate: true);
     }
 
     private void ApplyMeter(bool animate)
@@ -518,6 +691,22 @@ public sealed class NumericMeter : StackPanel
             EasingFunction = IslandAnimations.StrongEaseOut(),
         };
         _meterFill.BeginAnimation(WidthProperty, grow);
+    }
+
+    private void ApplyTimeMeter(bool animate)
+    {
+        var target = Math.Max(0, _timeMeter.ActualWidth * _timeFraction);
+        if (!animate)
+        {
+            _timeFill.BeginAnimation(WidthProperty, null);
+            _timeFill.Width = target;
+            return;
+        }
+        var animation = new DoubleAnimation(target, IslandAnimations.StrongEaseOutDuration)
+        {
+            EasingFunction = IslandAnimations.StrongEaseOut(),
+        };
+        _timeFill.BeginAnimation(WidthProperty, animation);
     }
 }
 
@@ -665,8 +854,8 @@ public sealed class ChartTile : StackPanel
         _labelKey = labelKey;
         Orientation = Orientation.Vertical;
         Height = TileHeight;
-        _stepped = new SteppedMeter(color) { Margin = new Thickness(0, 8, 0, 8) };
-        _capsule = new CapsuleMeter(color) { Margin = new Thickness(0, 12, 0, 12) };
+        _stepped = new SteppedMeter(color) { Margin = new Thickness(0, 6, 0, 6) };
+        _capsule = new CapsuleMeter(color) { Margin = new Thickness(0, 8, 0, 8) };
         _ring = new RingMeter(color) { Margin = new Thickness(0, 4, 0, 4) };
         _numeric = new NumericMeter(color) { Margin = new Thickness(0, 2, 0, 2) };
         Children.Add(_head);
@@ -697,17 +886,17 @@ public sealed class ChartTile : StackPanel
         {
             case ChartStyle.Stepped:
                 _head.Update(label, value);
-                _stepped.Update(value);
+                _stepped.Update(value, window);
                 break;
             case ChartStyle.Bar:
                 _head.Update(label, value);
-                _capsule.Update(value);
+                _capsule.Update(value, window);
                 break;
             case ChartStyle.Ring:
                 _ring.Update(label, value, window);
                 break;
             case ChartStyle.Numeric:
-                _numeric.Update(label, value);
+                _numeric.Update(label, value, window);
                 break;
         }
         _foot.Text = SubCaption(window, style);

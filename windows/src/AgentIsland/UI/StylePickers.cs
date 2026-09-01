@@ -165,69 +165,135 @@ public sealed class ChartStylePickerControl : Grid
             }
             case ChartStyle.Bar:
             {
-                var host = new Grid
+                var host = new StackPanel
                 {
+                    Orientation = Orientation.Vertical,
                     Width = 28,
-                    Height = 6,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center,
                 };
-                host.Children.Add(new Border
+                var upper = new Grid { Height = 4 };
+                upper.Children.Add(new Border
                 {
-                    CornerRadius = new CornerRadius(3),
+                    CornerRadius = new CornerRadius(2),
                     Background = IslandColors.Brush(IslandColors.White(0.10)),
                 });
-                host.Children.Add(new Border
+                upper.Children.Add(new Border
                 {
                     Width = 28 * 0.35,
-                    CornerRadius = new CornerRadius(3),
+                    CornerRadius = new CornerRadius(2),
                     Background = Brushes.White,
                     HorizontalAlignment = HorizontalAlignment.Left,
                 });
+                var lower = new Grid { Height = 2.5, Margin = new Thickness(0, 2.5, 0, 0) };
+                lower.Children.Add(new Border
+                {
+                    CornerRadius = new CornerRadius(1.25),
+                    Background = IslandColors.Brush(IslandColors.White(0.04)),
+                });
+                lower.Children.Add(new Border
+                {
+                    Width = 28 * 0.70,
+                    CornerRadius = new CornerRadius(1.25),
+                    Background = IslandColors.Brush(IslandColors.LiveTeal),
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                });
+                host.Children.Add(upper);
+                host.Children.Add(lower);
                 return host;
             }
             case ChartStyle.Stepped:
             {
-                var row = new StackPanel
+                var host = new StackPanel
                 {
-                    Orientation = Orientation.Horizontal,
+                    Orientation = Orientation.Vertical,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center,
                 };
+                var upperRow = new StackPanel { Orientation = Orientation.Horizontal };
                 for (var i = 0; i < 8; i++)
                 {
-                    row.Children.Add(new Rectangle
+                    upperRow.Children.Add(new Rectangle
                     {
                         Width = 2,
-                        Height = 12,
+                        Height = 8,
                         RadiusX = 0.75,
                         RadiusY = 0.75,
                         Margin = new Thickness(0.75, 0, 0.75, 0),
                         Fill = i < 3 ? Brushes.White : IslandColors.Brush(IslandColors.White(0.10)),
                     });
                 }
-                return row;
+                var lowerRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 0) };
+                for (var i = 0; i < 8; i++)
+                {
+                    lowerRow.Children.Add(new Rectangle
+                    {
+                        Width = 2,
+                        Height = 2.5,
+                        RadiusX = 0.5,
+                        RadiusY = 0.5,
+                        Margin = new Thickness(0.75, 0, 0.75, 0),
+                        Fill = i < 5 ? IslandColors.Brush(IslandColors.LiveTeal) : IslandColors.Brush(IslandColors.White(0.04)),
+                    });
+                }
+                host.Children.Add(upperRow);
+                host.Children.Add(lowerRow);
+                return host;
             }
             case ChartStyle.Numeric:
             {
+                var host = new StackPanel
+                {
+                    Orientation = Orientation.Vertical,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
                 var text = new TextBlock
                 {
                     HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
                     FontFamily = IslandFonts.Mono,
                 };
                 text.Inlines.Add(new System.Windows.Documents.Run("35")
                 {
-                    FontSize = 15,
+                    FontSize = 13,
                     FontWeight = FontWeights.Bold,
                     Foreground = Brushes.White,
                 });
                 text.Inlines.Add(new System.Windows.Documents.Run("%")
                 {
-                    FontSize = 11,
+                    FontSize = 9.5,
                     Foreground = IslandColors.Brush(IslandColors.White(0.5)),
                 });
-                return text;
+                var upper = new Grid { Width = 26, Height = 2, Margin = new Thickness(0, 1.5, 0, 0) };
+                upper.Children.Add(new Border
+                {
+                    CornerRadius = new CornerRadius(1),
+                    Background = IslandColors.Brush(IslandColors.White(0.10)),
+                });
+                upper.Children.Add(new Border
+                {
+                    Width = 26 * 0.35,
+                    CornerRadius = new CornerRadius(1),
+                    Background = Brushes.White,
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                });
+                var lower = new Grid { Width = 26, Height = 1.5, Margin = new Thickness(0, 1.5, 0, 0) };
+                lower.Children.Add(new Border
+                {
+                    CornerRadius = new CornerRadius(0.75),
+                    Background = IslandColors.Brush(IslandColors.White(0.04)),
+                });
+                lower.Children.Add(new Border
+                {
+                    Width = 26 * 0.70,
+                    CornerRadius = new CornerRadius(0.75),
+                    Background = IslandColors.Brush(IslandColors.LiveTeal),
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                });
+                host.Children.Add(text);
+                host.Children.Add(upper);
+                host.Children.Add(lower);
+                return host;
             }
             default:
             {
