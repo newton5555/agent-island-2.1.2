@@ -397,12 +397,30 @@ public partial class IslandWindow : Window
         {
             LeftLogo.Tool = left;
             LeftPill.Tool = left;
+            LeftPill.Visibility = Visibility.Visible;
         }
+        else
+        {
+            LeftPill.Visibility = Visibility.Collapsed;
+            LeftPill.Inlines.Clear();
+            LeftPill.BeginAnimation(OpacityProperty, null);
+            LeftPill.Opacity = 0;
+        }
+
         if (_rightTool is { } right)
         {
             RightLogo.Tool = right;
             RightPill.Tool = right;
+            RightPill.Visibility = Visibility.Visible;
         }
+        else
+        {
+            RightPill.Visibility = Visibility.Collapsed;
+            RightPill.Inlines.Clear();
+            RightPill.BeginAnimation(OpacityProperty, null);
+            RightPill.Opacity = 0;
+        }
+
         // The logo's fixed grid column reserves its slot either way, so we
         // fade opacity (the macOS openMorph spring) rather than hard-toggle
         // Visibility — toggling a provider springs the mark in/out.
@@ -1136,6 +1154,10 @@ public partial class IslandWindow : Window
             LeftPill.HorizontalAlignment = HorizontalAlignment.Right;
             LeftPill.Margin = new Thickness(6, 0, 14, 0);
             LeftPill.Mirrored = true;
+
+            RightPill.Visibility = Visibility.Collapsed;
+            RightPill.BeginAnimation(OpacityProperty, null);
+            RightPill.Opacity = 0;
         }
         else
         {
@@ -1151,6 +1173,10 @@ public partial class IslandWindow : Window
             RightPill.HorizontalAlignment = HorizontalAlignment.Left;
             RightPill.Margin = new Thickness(14, 0, 6, 0);
             RightPill.Mirrored = false;
+
+            LeftPill.Visibility = Visibility.Collapsed;
+            LeftPill.BeginAnimation(OpacityProperty, null);
+            LeftPill.Opacity = 0;
         }
         else
         {
@@ -1177,16 +1203,48 @@ public partial class IslandWindow : Window
 
     private void FadePills(bool visible, int delayMs, double seconds)
     {
-        var fade = new DoubleAnimation(visible ? 1 : 0, new Duration(TimeSpan.FromSeconds(seconds)))
+        var leftTarget = visible && _leftTool is not null ? 1.0 : 0.0;
+        var rightTarget = visible && _rightTool is not null ? 1.0 : 0.0;
+
+        if (_leftTool is not null)
         {
-            BeginTime = TimeSpan.FromMilliseconds(delayMs),
-            EasingFunction = new QuadraticEase
+            LeftPill.Visibility = Visibility.Visible;
+            var fade = new DoubleAnimation(leftTarget, new Duration(TimeSpan.FromSeconds(seconds)))
             {
-                EasingMode = visible ? EasingMode.EaseOut : EasingMode.EaseIn,
-            },
-        };
-        LeftPill.BeginAnimation(OpacityProperty, fade);
-        RightPill.BeginAnimation(OpacityProperty, fade.Clone());
+                BeginTime = TimeSpan.FromMilliseconds(delayMs),
+                EasingFunction = new QuadraticEase
+                {
+                    EasingMode = leftTarget > 0 ? EasingMode.EaseOut : EasingMode.EaseIn,
+                },
+            };
+            LeftPill.BeginAnimation(OpacityProperty, fade);
+        }
+        else
+        {
+            LeftPill.BeginAnimation(OpacityProperty, null);
+            LeftPill.Opacity = 0;
+            LeftPill.Visibility = Visibility.Collapsed;
+        }
+
+        if (_rightTool is not null)
+        {
+            RightPill.Visibility = Visibility.Visible;
+            var fade = new DoubleAnimation(rightTarget, new Duration(TimeSpan.FromSeconds(seconds)))
+            {
+                BeginTime = TimeSpan.FromMilliseconds(delayMs),
+                EasingFunction = new QuadraticEase
+                {
+                    EasingMode = rightTarget > 0 ? EasingMode.EaseOut : EasingMode.EaseIn,
+                },
+            };
+            RightPill.BeginAnimation(OpacityProperty, fade);
+        }
+        else
+        {
+            RightPill.BeginAnimation(OpacityProperty, null);
+            RightPill.Opacity = 0;
+            RightPill.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void ShowExpandedContent()
@@ -1452,12 +1510,21 @@ public partial class IslandWindow : Window
                 IsToolLoading(leftTool),
                 engine.SeverityFor(leftTool));
         }
+        else
+        {
+            LeftPill.Inlines.Clear();
+        }
+
         if (_rightTool is { } rightTool)
         {
             RightPill.Update(
                 UsagePage.UsageFor(rightTool.ToDisplayProvider()).FiveHour,
                 IsToolLoading(rightTool),
                 engine.SeverityFor(rightTool));
+        }
+        else
+        {
+            RightPill.Inlines.Clear();
         }
 
         // In compact, the pills normally hide. "Always show usage" keeps the
@@ -1471,6 +1538,8 @@ public partial class IslandWindow : Window
             RightPill.BeginAnimation(OpacityProperty, null);
             LeftPill.Opacity = _leftTool is not null ? 1 : 0;
             RightPill.Opacity = _rightTool is not null ? 1 : 0;
+            LeftPill.Visibility = _leftTool is not null ? Visibility.Visible : Visibility.Collapsed;
+            RightPill.Visibility = _rightTool is not null ? Visibility.Visible : Visibility.Collapsed;
         }
         else if (_model.State == IslandState.Compact)
         {
@@ -1478,6 +1547,8 @@ public partial class IslandWindow : Window
             RightPill.BeginAnimation(OpacityProperty, null);
             LeftPill.Opacity = 0;
             RightPill.Opacity = 0;
+            if (_leftTool is null) LeftPill.Visibility = Visibility.Collapsed;
+            if (_rightTool is null) RightPill.Visibility = Visibility.Collapsed;
         }
     }
 

@@ -77,7 +77,7 @@ public sealed class ReportWindow : Window
         ResizeMode = ResizeMode.NoResize;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         ShowInTaskbar = false;
-        Topmost = true;
+        Topmost = false;
         System.Windows.Media.TextOptions.SetTextFormattingMode(this, TextFormattingMode.Display);
 
         // ← period label → row above the card (macOS pager): the right edge

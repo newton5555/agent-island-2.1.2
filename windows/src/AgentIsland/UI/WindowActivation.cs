@@ -16,6 +16,12 @@ internal static class WindowActivation
     [DllImport("user32.dll")]
     private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
+    [DllImport("user32.dll")]
+    private static extern bool BringWindowToTop(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern void SwitchToThisWindow(IntPtr hWnd, bool fAltTab);
+
     public static void BringToFront(Window window)
     {
         try
@@ -44,6 +50,8 @@ internal static class WindowActivation
             var handle = new WindowInteropHelper(window).Handle;
             if (handle == IntPtr.Zero) return;
             ShowWindow(handle, SwRestore);
+            BringWindowToTop(handle);
+            SwitchToThisWindow(handle, true);
             SetForegroundWindow(handle);
         }
         catch

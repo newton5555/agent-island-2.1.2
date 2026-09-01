@@ -232,7 +232,7 @@ public sealed class SettingsWindow : Window
         MinHeight = 460;
         Background = IslandColors.Brush(IslandColors.AlarmBackground);
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        Topmost = true;
+        Topmost = false;
         // Pixel-snapped glyphs: the 10-13px settings copy is blurry in WPF's
         // default Ideal mode.
         System.Windows.Media.TextOptions.SetTextFormattingMode(

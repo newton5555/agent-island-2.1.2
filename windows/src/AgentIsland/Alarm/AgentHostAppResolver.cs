@@ -30,6 +30,8 @@ public static class AgentHostAppResolver
     public static bool IsHostAppFrontmost(TriggerTool provider, string? cwd)
     {
         if (provider == TriggerTool.Cursor) return IsForegroundExe("cursor");
+        if (provider == TriggerTool.Antigravity && IsForegroundExe("antigravity")) return true;
+        if (provider == TriggerTool.Grok && IsForegroundExe("grok")) return true;
         return IsHostAppFrontmost(cwd);
     }
 
@@ -47,7 +49,8 @@ public static class AgentHostAppResolver
                 {
                     exe = exe[..^4];
                 }
-                return string.Equals(exe, name, StringComparison.OrdinalIgnoreCase);
+                return string.Equals(exe, name, StringComparison.OrdinalIgnoreCase)
+                    || exe.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0;
             }
         }
         catch

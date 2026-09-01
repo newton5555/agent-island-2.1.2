@@ -43,15 +43,12 @@ public static class TurnAlarmNavigator
         }
         if (provider == TriggerTool.Antigravity)
         {
-            // Verified on a real install (2026-08-08): `agy --conversation
-            // <id>` reopens the exact thread and appends to it — the one
-            // guest with true per-id resume. The session id IS the
-            // conversation id the scanner read from brain/.
-            // The session is often still alive in its own terminal — land
-            // there first (macOS 2.1.2 parity); spawn the exact-thread
-            // resume only when nothing is running.
+            // If Antigravity IDE (desktop app) is running, bring its window to the
+            // foreground first — the user lives in the IDE, not a spawned terminal.
+            // When running in a terminal, focus the live terminal or resume via CLI.
             return System.Threading.Tasks.Task.Run(() =>
-                LiveSessionWindow.TryFocus("agy", "antigravity")
+                FocusAppWindow("Antigravity", "antigravity", "antigravity-ide")
+                || LiveSessionWindow.TryFocus("agy", "antigravity")
                 || (Trigger.CLILocator.Locate("agy") is { } agy
                     && RunResumeInTerminal(
                         agy, $"--conversation {sessionId}", cwd, "Antigravity resume")));
@@ -196,21 +193,58 @@ public static class TurnAlarmNavigator
         bridgeSessionId is null ? "claude://" : $"claude://code/{bridgeSessionId}";
 
     /// Brings the named app's main window up: restores it when minimized and
-    /// takes the foreground. Works because the click that got us here means
-    /// our own window currently holds focus, so Windows permits the handoff.
-    private static bool FocusAppWindow(string processName)
+    /// takes the foreground. Uses EnumWindows to reliably locate Electron/Chromium
+    /// top-level windows that do not set Process.MainWindowHandle.
+    private static bool FocusAppWindow(params string[] processKeywords)
     {
         try
         {
-            foreach (var process in Process.GetProcessesByName(processName))
+            var pids = new HashSet<uint>();
+            foreach (var process in Process.GetProcesses())
             {
-                var hwnd = process.MainWindowHandle;
-                if (hwnd == IntPtr.Zero) continue;
+                try
+                {
+                    var pName = process.ProcessName;
+                    foreach (var kw in processKeywords)
+                    {
+                        if (pName.Equals(kw, StringComparison.OrdinalIgnoreCase)
+                            || pName.IndexOf(kw, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            pids.Add((uint)process.Id);
+                            break;
+                        }
+                    }
+                }
+                catch
+                {
+                }
+                finally
+                {
+                    process.Dispose();
+                }
+            }
+
+            if (pids.Count == 0) return false;
+
+            var matchingHwnds = new List<IntPtr>();
+            EnumWindows((hwnd, _) =>
+            {
+                if (!IsWindowVisible(hwnd)) return true;
+                GetWindowThreadProcessId(hwnd, out var pid);
+                if (pids.Contains(pid) && GetWindowTextLength(hwnd) > 0)
+                {
+                    matchingHwnds.Add(hwnd);
+                }
+                return true;
+            }, IntPtr.Zero);
+
+            foreach (var hwnd in matchingHwnds)
+            {
                 if (IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
-                // SetForegroundWindow is refused when we no longer hold the
-                // foreground — report that honestly so the caller falls
-                // through to the CLI resume instead of a dead click.
-                if (SetForegroundWindow(hwnd)) return true;
+                BringWindowToTop(hwnd);
+                SwitchToThisWindow(hwnd, true);
+                SetForegroundWindow(hwnd);
+                return true;
             }
         }
         catch
@@ -229,6 +263,25 @@ public static class TurnAlarmNavigator
 
     [DllImport("user32.dll")]
     private static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool BringWindowToTop(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern void SwitchToThisWindow(IntPtr hWnd, bool fAltTab);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern int GetWindowTextLength(IntPtr hWnd);
 
     /// Opens a visible terminal that resumes the session. Uses the cmd.exe
     /// `start` launcher (reliable, known quoting) rather than Windows Terminal

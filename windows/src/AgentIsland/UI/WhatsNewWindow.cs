@@ -93,7 +93,7 @@ public sealed class WhatsNewWindow : Window
     {
         if (_open is { } existing)
         {
-            existing.Activate();
+            WindowActivation.BringToFront(existing);
             return;
         }
         _open = new WhatsNewWindow(Pages, showChip: true);
@@ -103,7 +103,7 @@ public sealed class WhatsNewWindow : Window
             WhatsNewGate.MarkSeen();
         };
         _open.Show();
-        _open.Activate();
+        WindowActivation.BringToFront(_open);
     }
 
     /// The guide reuses the card wholesale; closing it never marks the
@@ -112,13 +112,13 @@ public sealed class WhatsNewWindow : Window
     {
         if (_open is { } existing)
         {
-            existing.Activate();
+            WindowActivation.BringToFront(existing);
             return;
         }
         _open = new WhatsNewWindow(GuidePages, showChip: false);
         _open.Closed += (_, _) => _open = null;
         _open.Show();
-        _open.Activate();
+        WindowActivation.BringToFront(_open);
     }
 
     private WhatsNewWindow(Page[] pages, bool showChip)
@@ -130,7 +130,7 @@ public sealed class WhatsNewWindow : Window
         Background = Brushes.Transparent;
         ResizeMode = ResizeMode.NoResize;
         ShowInTaskbar = false;
-        Topmost = true;
+        Topmost = false;
         SizeToContent = SizeToContent.WidthAndHeight;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
