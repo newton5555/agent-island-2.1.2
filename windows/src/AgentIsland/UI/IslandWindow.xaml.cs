@@ -34,7 +34,8 @@ public partial class IslandWindow : Window
     private bool _hovering;
     private System.Windows.Controls.StackPanel? _leftTitle;
     private System.Windows.Controls.StackPanel? _rightTitle;
-    private ResetCardChip? _resetCards;
+    private ResetCardChip? _leftResetCards;
+    private ResetCardChip? _rightResetCards;
     private System.Windows.Controls.TextBlock? _leftChip;
     private System.Windows.Controls.TextBlock? _rightChip;
 
@@ -305,6 +306,7 @@ public partial class IslandWindow : Window
 
         System.ComponentModel.PropertyChangedEventHandler onUsage = (_, _) => Dispatcher.BeginInvoke(() =>
         {
+            UpdatePlanChips();
             UpdatePills();
             UpdateHalo();
         });
@@ -474,6 +476,15 @@ public partial class IslandWindow : Window
         _leftTitle.HorizontalAlignment = HorizontalAlignment.Left;
         _leftTitle.Margin = new Thickness(8, 0, 0, 0);
         System.Windows.Controls.Grid.SetColumn(_leftTitle, 2);
+        _leftResetCards = new ResetCardChip { Margin = new Thickness(0, 0, 10, 0) };
+        _leftResetCards.PopupClosed += (_, _) => Dispatcher.BeginInvoke(() =>
+        {
+            if (!Silhouette.IsMouseOver && !_hovering && _model.State != IslandState.Compact)
+            {
+                SetState(IslandState.Compact);
+            }
+        });
+        _leftTitle.Children.Insert(0, _leftResetCards);
         TopStrip.Children.Add(_leftTitle);
 
         (_rightTitle, _rightChip) = MakeProviderTitle("Codex");
@@ -483,24 +494,30 @@ public partial class IslandWindow : Window
         // Banked-reset count ("reset cards") — the escape hatches of the
         // weekly-only quota era. Always shown, ×0 included, in the dead
         // space left of the title; click for per-card expiry.
-        _resetCards = new ResetCardChip { Margin = new Thickness(0, 0, 10, 0) };
+        _rightResetCards = new ResetCardChip { Margin = new Thickness(0, 0, 10, 0) };
         // The popup suppressed the hover-out collapse while it was up; when
         // it closes, run the deferred check — if the mouse has genuinely
         // left the island, fold now instead of hanging open forever.
-        _resetCards.PopupClosed += (_, _) => Dispatcher.BeginInvoke(() =>
+        _rightResetCards.PopupClosed += (_, _) => Dispatcher.BeginInvoke(() =>
         {
             if (!Silhouette.IsMouseOver && !_hovering && _model.State != IslandState.Compact)
             {
                 SetState(IslandState.Compact);
             }
         });
-        _rightTitle.Children.Insert(0, _resetCards);
+        _rightTitle.Children.Insert(0, _rightResetCards);
         TopStrip.Children.Add(_rightTitle);
 
         System.ComponentModel.PropertyChangedEventHandler onPlanChips =
             (_, _) => Dispatcher.BeginInvoke(UpdatePlanChips);
         UsageStore.Shared.PropertyChanged += onPlanChips;
         _teardown.Add(() => UsageStore.Shared.PropertyChanged -= onPlanChips);
+        AntigravityUsageStore.Shared.PropertyChanged += onPlanChips;
+        _teardown.Add(() => AntigravityUsageStore.Shared.PropertyChanged -= onPlanChips);
+        GrokUsageStore.Shared.PropertyChanged += onPlanChips;
+        _teardown.Add(() => GrokUsageStore.Shared.PropertyChanged -= onPlanChips);
+        CursorUsageStore.Shared.PropertyChanged += onPlanChips;
+        _teardown.Add(() => CursorUsageStore.Shared.PropertyChanged -= onPlanChips);
         UpdatePlanChips();
 
         // Overview needs the taller panel (contribution grid); the size
@@ -574,19 +591,27 @@ public partial class IslandWindow : Window
     {
         UpdateChip(_leftChip, _leftTool is { } l ? UsagePage.UsageFor(l.ToDisplayProvider()).Plan : null);
         UpdateChip(_rightChip, _rightTool is { } r ? UsagePage.UsageFor(r.ToDisplayProvider()).Plan : null);
-        if (_resetCards is not null)
+
+        var store = UsageStore.Shared;
+        var banked = (store.Codex.ResetCards ?? 0) > 0;
+
+        if (_leftResetCards is not null)
         {
-            // The banked-reset chip is Codex data living inside the right
-            // title panel; any other occupant collapses it — and it only
-            // exists at all when a card is actually banked (macOS
-            // PanelHeader: resetCards > 0; a permanent ×0 was noise).
-            var store = UsageStore.Shared;
+            var codexLeft = _leftTool == TriggerTool.Codex;
+            _leftResetCards.Visibility = codexLeft && banked ? Visibility.Visible : Visibility.Collapsed;
+            if (codexLeft && banked)
+            {
+                _leftResetCards.Update(store.Codex.ResetCards, store.Codex.ResetCardDetails);
+            }
+        }
+
+        if (_rightResetCards is not null)
+        {
             var codexRight = _rightTool == TriggerTool.Codex;
-            var banked = (store.Codex.ResetCards ?? 0) > 0;
-            _resetCards.Visibility = codexRight && banked ? Visibility.Visible : Visibility.Collapsed;
+            _rightResetCards.Visibility = codexRight && banked ? Visibility.Visible : Visibility.Collapsed;
             if (codexRight && banked)
             {
-                _resetCards.Update(store.Codex.ResetCards, store.Codex.ResetCardDetails);
+                _rightResetCards.Update(store.Codex.ResetCards, store.Codex.ResetCardDetails);
             }
         }
     }
@@ -805,7 +830,7 @@ public partial class IslandWindow : Window
             // which reads as a MouseLeave here — folding the panel would
             // yank the popup shut mid-look. Hold the panel while it's up;
             // its Closed handler runs this collapse check again.
-            if (_resetCards?.IsPopupOpen == true) return;
+            if (_leftResetCards?.IsPopupOpen == true || _rightResetCards?.IsPopupOpen == true) return;
             if (!_hovering && _model.State != IslandState.Compact)
             {
                 SetState(IslandState.Compact);
@@ -1268,6 +1293,7 @@ public partial class IslandWindow : Window
         _rightTitle?.BeginAnimation(OpacityProperty, fade.Clone());
         // The titles are built hit-test-off so the invisible strip never eats
         // bar clicks; expanded they host a real control (the reset-card chip).
+        if (_leftTitle is not null) _leftTitle.IsHitTestVisible = true;
         if (_rightTitle is not null) _rightTitle.IsHitTestVisible = true;
         SettingsGear.BeginAnimation(OpacityProperty, fade.Clone());
     }
@@ -1291,6 +1317,7 @@ public partial class IslandWindow : Window
         ExpandedContent.BeginAnimation(OpacityProperty, fade);
         _leftTitle?.BeginAnimation(OpacityProperty, fade.Clone());
         _rightTitle?.BeginAnimation(OpacityProperty, fade.Clone());
+        if (_leftTitle is not null) _leftTitle.IsHitTestVisible = false;
         if (_rightTitle is not null) _rightTitle.IsHitTestVisible = false;
         SettingsGear.BeginAnimation(OpacityProperty, fade.Clone());
     }
