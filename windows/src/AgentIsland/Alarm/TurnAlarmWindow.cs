@@ -352,10 +352,10 @@ public sealed class TurnAlarmWindow : Window
     {
         var cluster = new Grid
         {
-            Width = 148,
-            Height = 126,
+            Width = 140,
+            Height = 140,
             HorizontalAlignment = HorizontalAlignment.Center,
-            Margin = new Thickness(0, 0, 0, 20),
+            Margin = new Thickness(0, 0, 0, 14),
         };
 
         // Antigravity's halo sweeps all four Google hues and drifts a slow
@@ -364,31 +364,31 @@ public sealed class TurnAlarmWindow : Window
         FrameworkElement glow;
         if (Provider == TriggerTool.Antigravity)
         {
-            glow = GoogleWheel(138);
+            glow = GoogleWheel(108);
             IslandMotion.Breathe(glow, UIElement.OpacityProperty, 0.38, 0.26, 1.7);
         }
         else
         {
             glow = new System.Windows.Shapes.Ellipse
             {
-                Width = 138,
-                Height = 138,
+                Width = 108,
+                Height = 108,
                 Fill = IslandColors.Brush(tint),
                 Opacity = 0.20,
             };
             IslandMotion.Breathe(glow, UIElement.OpacityProperty, 0.20, 0.12, 1.7);
         }
-        glow.Effect = new BlurEffect { Radius = 18 };
+        glow.Effect = new BlurEffect { Radius = 14 };
         glow.HorizontalAlignment = HorizontalAlignment.Center;
         glow.VerticalAlignment = VerticalAlignment.Center;
         cluster.Children.Add(glow);
-        IslandMotion.Breathe((BlurEffect)glow.Effect, BlurEffect.RadiusProperty, 18, 28, 1.7);
-        IslandMotion.BreatheScale(glow, 0.92, 1.12, 1.7);
+        IslandMotion.Breathe((BlurEffect)glow.Effect, BlurEffect.RadiusProperty, 14, 22, 1.7);
+        IslandMotion.BreatheScale(glow, 0.94, 1.08, 1.7);
 
         var ringOuter = new System.Windows.Shapes.Ellipse
         {
-            Width = 124,
-            Height = 124,
+            Width = 102,
+            Height = 102,
             Stroke = IslandColors.Brush(tint),
             StrokeThickness = 1,
             Opacity = 0.25,
@@ -397,12 +397,12 @@ public sealed class TurnAlarmWindow : Window
         };
         cluster.Children.Add(ringOuter);
         IslandMotion.Breathe(ringOuter, UIElement.OpacityProperty, 0.25, 0.03, 1.7);
-        IslandMotion.BreatheScale(ringOuter, 0.82, 1.16, 1.7);
+        IslandMotion.BreatheScale(ringOuter, 0.88, 1.10, 1.7);
 
         var ringInner = new System.Windows.Shapes.Ellipse
         {
-            Width = 92,
-            Height = 92,
+            Width = 84,
+            Height = 84,
             Stroke = IslandColors.Brush(tint),
             StrokeThickness = 0.75,
             Opacity = 0.14,
@@ -411,7 +411,7 @@ public sealed class TurnAlarmWindow : Window
         };
         cluster.Children.Add(ringInner);
         IslandMotion.Breathe(ringInner, UIElement.OpacityProperty, 0.14, 0.30, 1.7);
-        IslandMotion.BreatheScale(ringInner, 1.08, 0.96, 1.7);
+        IslandMotion.BreatheScale(ringInner, 1.05, 0.96, 1.7);
 
         // The provider's REAL mark — the old path hardwired "not Claude →
         // OpenAI knot", crowning Grok/Cursor/Antigravity alarms with
