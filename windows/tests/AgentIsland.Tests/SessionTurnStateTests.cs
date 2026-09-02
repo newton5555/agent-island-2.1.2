@@ -23,6 +23,9 @@ public static class SessionTurnStateTests
             ("desktop bookkeeping write does not suppress fresh end_turn", TestDesktopBookkeepingWriteDoesNotSuppressFreshEndTurn),
             ("desktop activity well after end_turn still suppresses", TestDesktopActivityWellAfterEndTurnStillSuppresses),
             ("claude streaming assistant is working", TestClaudeStreamingAssistantIsWorking),
+            ("antigravity completed background task clears running flag", TestAntigravityCompletedBackgroundTaskClearsRunningFlag),
+            ("antigravity active background task stays running", TestAntigravityActiveBackgroundTaskStaysRunning),
+            ("antigravity completed quiet task becomes needs-you", TestAntigravityCompletedQuietTaskBecomesNeedsYou),
         };
 
         foreach (var (name, test) in tests)
@@ -240,6 +243,64 @@ public static class SessionTurnStateTests
                 tmp, now, EmptyLastWorking, null, SessionTurnState.Claude);
             Expect(state.Status == ActivityState.Working,
                 "Claude assistant output without end_turn should stay running");
+        }
+        finally
+        {
+            File.Delete(tmp);
+        }
+    }
+
+    private static void TestAntigravityCompletedBackgroundTaskClearsRunningFlag()
+    {
+        var lines = new[]
+        {
+            """{"step_index":10,"source":"USER_EXPLICIT","type":"USER_INPUT","status":"DONE","created_at":"2026-07-02T01:15:00.000Z","content":"run"}""",
+            """{"step_index":11,"source":"MODEL","type":"RUN_COMMAND","status":"RUNNING","created_at":"2026-07-02T01:15:01.000Z","content":"Tool is running as a background task with task id: agy-session/task-11"}""",
+            """{"step_index":12,"source":"MODEL","type":"PLANNER_RESPONSE","status":"DONE","created_at":"2026-07-02T01:15:02.000Z","content":"The command is running in the background."}""",
+            """{"step_index":13,"source":"SYSTEM","type":"SYSTEM_MESSAGE","status":"DONE","created_at":"2026-07-02T01:15:03.000Z","content":"Task id \"agy-session/task-11\" finished with result: The command exited with code 0."}""",
+            """{"step_index":14,"source":"MODEL","type":"PLANNER_RESPONSE","status":"DONE","created_at":"2026-07-02T01:15:04.000Z","content":"The task is complete."}""",
+        };
+
+        var state = SessionTurnState.Antigravity(lines);
+        Expect(state.IsDone, "a completed background task must allow the latest response to finish the turn");
+        Expect(!state.IsRunning, "a completed background task must not keep IsRunning true");
+        Expect(state.Key == "ag:14", "the latest planner response should remain the turn key");
+    }
+
+    private static void TestAntigravityActiveBackgroundTaskStaysRunning()
+    {
+        var lines = new[]
+        {
+            """{"step_index":20,"source":"USER_EXPLICIT","type":"USER_INPUT","status":"DONE","created_at":"2026-07-02T01:15:00.000Z","content":"run"}""",
+            """{"step_index":21,"source":"MODEL","type":"RUN_COMMAND","status":"RUNNING","created_at":"2026-07-02T01:15:01.000Z","content":"Tool is running as a background task with task id: agy-session/task-21"}""",
+            """{"step_index":22,"source":"MODEL","type":"PLANNER_RESPONSE","status":"DONE","created_at":"2026-07-02T01:15:02.000Z","content":"The command is still running in the background."}""",
+        };
+
+        var state = SessionTurnState.Antigravity(lines);
+        Expect(!state.IsDone, "a background task without a completion event must keep the turn open");
+        Expect(state.IsRunning, "an active background task must keep IsRunning true");
+    }
+
+    private static void TestAntigravityCompletedQuietTaskBecomesNeedsYou()
+    {
+        var now = Date("2026-07-02T01:21:00.000Z");
+        var tmp = WriteTranscript(new[]
+        {
+            """{"step_index":30,"source":"USER_EXPLICIT","type":"USER_INPUT","status":"DONE","created_at":"2026-07-02T01:15:00.000Z","content":"run"}""",
+            """{"step_index":31,"source":"MODEL","type":"RUN_COMMAND","status":"RUNNING","created_at":"2026-07-02T01:15:01.000Z","content":"Tool is running as a background task with task id: agy-session/task-31"}""",
+            """{"step_index":32,"source":"SYSTEM","type":"SYSTEM_MESSAGE","status":"DONE","created_at":"2026-07-02T01:15:10.000Z","content":"Task id \"agy-session/task-31\" finished with result: The command exited with code 0."}""",
+            """{"step_index":33,"source":"MODEL","type":"PLANNER_RESPONSE","status":"DONE","created_at":"2026-07-02T01:15:11.000Z","content":"The task is complete."}""",
+        }, modified: now.AddMinutes(-6));
+        try
+        {
+            var lastWorking = new Dictionary<string, DateTimeOffset>
+            {
+                [tmp] = now.AddMinutes(-1),
+            };
+            var state = SessionScanner.SessionState(
+                tmp, now, lastWorking, null, SessionTurnState.Antigravity, quietMeansDone: true);
+            Expect(state.Status == ActivityState.NeedsYou,
+                "a quiet transcript whose background task finished must not become Stalled");
         }
         finally
         {

@@ -59,6 +59,33 @@ public static class ProviderIdentity
         _ => ClaudeAccent,
     };
 
+    /// The leading colour used by the single-colour consumers (halo, urgency
+    /// tint).  The edge sweep uses StreamPalette below so its colour moves
+    /// through the whole provider ramp rather than staying monochrome.
+    public static Color StreamColor(DisplayProvider provider) => StreamPalette(provider)[0];
+
+    public static Color StreamColor(TriggerTool tool) => StreamColor(tool.ToDisplayProvider());
+
+    /// Saturated ramps for the FollowModel edge sweep.  These are intentionally
+    /// separate from Accent: Accent is tuned for text and controls, while a
+    /// moving comet needs brighter neighbouring colours to remain legible on
+    /// a black layered window.  Antigravity uses Google's four brand hues;
+    /// the other providers retain the existing stream colour as their anchor
+    /// and add nearby highlights rather than asserting an unverified official
+    /// multi-colour logo treatment.
+    public static IReadOnlyList<Color> StreamPalette(DisplayProvider provider) => provider switch
+    {
+        DisplayProvider.Claude => ClaudeStreamPalette,
+        DisplayProvider.Codex => CodexStreamPalette,
+        DisplayProvider.Antigravity => GoogleRamp,
+        DisplayProvider.Grok => GrokStreamPalette,
+        DisplayProvider.Cursor => CursorStreamPalette,
+        _ => ClaudeStreamPalette,
+    };
+
+    public static IReadOnlyList<Color> StreamPalette(TriggerTool tool) =>
+        StreamPalette(tool.ToDisplayProvider());
+
     /// The brand RAMP (macOS brandStops): Antigravity carries Google's four
     /// hues; everyone else is their accent as a flat two-stop ramp so every
     /// consumer can treat "the brand color" as a gradient.
@@ -71,6 +98,34 @@ public static class ProviderIdentity
         Color.FromRgb(52, 168, 83),
         Color.FromRgb(251, 188, 5),
         Color.FromRgb(234, 67, 53),
+    };
+
+    private static readonly IReadOnlyList<Color> ClaudeStreamPalette = new[]
+    {
+        Color.FromRgb(0xF5, 0x73, 0x43), // coral orange
+        Color.FromRgb(0xFF, 0xB1, 0x5B), // warm highlight
+        Color.FromRgb(0xFF, 0x8A, 0x65), // salmon
+    };
+
+    private static readonly IReadOnlyList<Color> CodexStreamPalette = new[]
+    {
+        Color.FromRgb(0x38, 0x9B, 0xFF), // electric blue
+        Color.FromRgb(0x7C, 0xD7, 0xFF), // cyan highlight
+        Color.FromRgb(0x6E, 0x7B, 0xFF), // periwinkle
+    };
+
+    private static readonly IReadOnlyList<Color> GrokStreamPalette = new[]
+    {
+        Color.FromRgb(0xE2, 0x4A, 0x5A), // crimson anchor
+        Color.FromRgb(0xFF, 0x8B, 0x96), // rose highlight
+        Color.FromRgb(0xD8, 0xDE, 0xE4), // cool steel
+    };
+
+    private static readonly IReadOnlyList<Color> CursorStreamPalette = new[]
+    {
+        Color.FromRgb(0x00, 0xD2, 0xFF), // electric cyan
+        Color.FromRgb(0x69, 0xF0, 0xFF), // ice highlight
+        Color.FromRgb(0x7C, 0x83, 0xFF), // blue-violet
     };
 
     /// macOS brandGradient: the ramp as a WPF brush at one opacity.

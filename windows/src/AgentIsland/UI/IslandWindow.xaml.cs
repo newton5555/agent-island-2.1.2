@@ -1355,7 +1355,9 @@ public partial class IslandWindow : Window
 
     private HaloMode _haloMode = HaloMode.Rest;
     private readonly RotateTransform _sweepRotate = new() { CenterX = 0.5, CenterY = 0.5 };
-    private Color _sweepTint;
+    private IReadOnlyList<Color> _sweepPalette = Array.Empty<Color>();
+    private IReadOnlyList<Color> _sweepRightPalette = Array.Empty<Color>();
+    private bool _isDualSweep;
     private bool _sweepActive;
     private bool _sweepSpinning;
 
@@ -1363,9 +1365,8 @@ public partial class IslandWindow : Window
     /// together, macOS GlowLayer numbers); auth-required holds a static red
     /// — a login can pend for hours and endless blinking reads as a crash;
     /// threshold alerts hold a sustained amber/red tint; at rest, Vivid keeps
-    /// the ambient aura in the chosen glow color and Calm keeps nothing at
-    /// all — no hover or refresh light, ambient is a mode, not an event
-    /// (macOS 1.7 semantics). Hidden providers don't get a vote.
+    /// the ambient aura in the chosen glow color, FollowModel dynamically follows
+    /// the active AI, and Calm keeps nothing at all.
     /// Interface scale (macOS 1f97e4d): a LayoutTransform on the canvas
     /// magnifies every layout constant at once, and the window grows with
     /// it so nothing clips. The positioning math already keys on the
@@ -1453,47 +1454,109 @@ public partial class IslandWindow : Window
             }
         }
         // At rest the halo IS the ambient light: Vivid paints it in the
-        // chosen glow color, Calm turns it fully off. Color is re-applied
-        // every pass (not only on mode changes) so a swatch click lands
-        // without a state flip. EffectiveEnabled folds in the battery saver.
+        // chosen glow color, FollowModel paints it in the active model's color,
+        // Calm turns it fully off. EffectiveEnabled folds in the battery saver.
         if (_haloMode == HaloMode.Rest)
         {
-            Halo.Color = Model.GlowColorStore.Shared.Color;
+            if (Model.LowPowerModeStore.Shared.Mode == Model.VisualMode.FollowModel)
+            {
+                var leftWorking = _leftTool is { } lt && monitor.StateFor(lt) == ActivityState.Working;
+                var rightWorking = _rightTool is { } rt && monitor.StateFor(rt) == ActivityState.Working;
+
+                if (leftWorking && rightWorking && _leftTool is { } l1 && _rightTool is { } r1)
+                {
+                    var c1 = Model.ProviderIdentity.StreamColor(l1);
+                    var c2 = Model.ProviderIdentity.StreamColor(r1);
+                    Halo.Color = Color.FromRgb(
+                        (byte)((c1.R + c2.R) / 2),
+                        (byte)((c1.G + c2.G) / 2),
+                        (byte)((c1.B + c2.B) / 2));
+                }
+                else if (leftWorking && _leftTool is { } l2)
+                {
+                    Halo.Color = Model.ProviderIdentity.StreamColor(l2);
+                }
+                else if (rightWorking && _rightTool is { } r2)
+                {
+                    Halo.Color = Model.ProviderIdentity.StreamColor(r2);
+                }
+                else
+                {
+                    Halo.Color = _leftTool is { } l
+                        ? Model.ProviderIdentity.StreamColor(l)
+                        : _rightTool is { } r
+                            ? Model.ProviderIdentity.StreamColor(r)
+                            : Model.GlowColorStore.Shared.Color;
+                }
+            }
+            else
+            {
+                Halo.Color = Model.GlowColorStore.Shared.Color;
+            }
             Halo.Opacity = Model.LowPowerModeStore.Shared.EffectiveEnabled ? 0 : 0.35;
         }
         UpdateSweep();
     }
 
     /// The orbit sweep hugging the island edge. Vivid keeps it alive
-    /// continuously in the glow color (alert tints override); Calm shows no
-    /// ambient light, so it never spins there — hover and refresh no longer
-    /// light anything (macOS 1.7: ambient is a mode, not an event).
+    /// continuously in the glow color (alert tints override); FollowModel dynamically
+    /// adopts the active model palette(s); Calm shows no ambient light.
     private void UpdateSweep()
     {
         var attention = AttentionShown();
-        var tint = attention
+        var alertTint = attention
             ? IslandColors.AlertRed
             : Model.AlertEngine.Shared.Severity switch
             {
                 Model.AlertSeverity.Critical => IslandColors.AlertRed,
                 Model.AlertSeverity.Warning => IslandColors.AlertAmber,
-                _ => Model.GlowColorStore.Shared.Color,
+                _ => (Color?)null,
             };
+
         var active = !Model.LowPowerModeStore.Shared.EffectiveEnabled;
-        if (active == _sweepActive && tint == _sweepTint) return;
-        _sweepActive = active;
-        _sweepTint = tint;
         if (!active)
         {
-            Sweep.Visibility = Visibility.Collapsed;
-            _sweepTimer?.Stop();
-            _sweepSpinning = false;
+            if (_sweepActive)
+            {
+                _sweepActive = false;
+                Sweep.Visibility = Visibility.Collapsed;
+                _sweepTimer?.Stop();
+                _sweepSpinning = false;
+            }
             return;
         }
+
+        var monitor = ActivityMonitor.Shared;
+        var leftState = _leftTool is { } lt ? monitor.StateFor(lt) : ActivityState.Idle;
+        var rightState = _rightTool is { } rt ? monitor.StateFor(rt) : ActivityState.Idle;
+
+        var (isDual, palette, rightPalette) = ResolveSweepPalettes(
+            alertTint,
+            Model.LowPowerModeStore.Shared.Mode,
+            Model.GlowColorStore.Shared.Color,
+            _leftTool,
+            leftState,
+            _rightTool,
+            rightState);
+
+        if (active == _sweepActive
+            && isDual == _isDualSweep
+            && SamePalette(palette, _sweepPalette)
+            && (!isDual || SamePalette(rightPalette, _sweepRightPalette)))
+        {
+            return;
+        }
+
+        _sweepActive = active;
+        _isDualSweep = isDual;
+        _sweepPalette = palette;
+        _sweepRightPalette = rightPalette;
+
         Sweep.Visibility = Visibility.Visible;
-        // The brush swaps with the tint, but the shared transform keeps the
-        // rotation phase, so recolors never visibly restart the sweep.
-        Sweep.BorderBrush = ConicSweepBrush.Make(tint, _sweepRotate);
+        Sweep.BorderBrush = isDual
+            ? ConicSweepBrush.MakeDual(palette, rightPalette, _sweepRotate)
+            : ConicSweepBrush.Make(palette, _sweepRotate);
+
         if (!_sweepSpinning)
         {
             _sweepSpinning = true;
@@ -1514,6 +1577,78 @@ public partial class IslandWindow : Window
             }
             _sweepTimer.Start();
         }
+    }
+
+    private static bool SamePalette(IReadOnlyList<Color> first, IReadOnlyList<Color> second)
+    {
+        if (first.Count != second.Count) return false;
+        for (var i = 0; i < first.Count; i++)
+        {
+            if (first[i] != second[i]) return false;
+        }
+
+        return true;
+    }
+
+    internal static (bool IsDual, IReadOnlyList<Color> LeftPalette, IReadOnlyList<Color> RightPalette) ResolveSweepPalettes(
+        Color? alertTint,
+        Model.VisualMode visualMode,
+        Color fallbackGlowColor,
+        TriggerTool? leftTool,
+        ActivityState leftState,
+        TriggerTool? rightTool,
+        ActivityState rightState)
+    {
+        bool isDual = false;
+        IReadOnlyList<Color> palette = new[] { fallbackGlowColor };
+        IReadOnlyList<Color> rightPalette = palette;
+
+        if (alertTint is { } at)
+        {
+            // Alerts intentionally collapse to one sustained warning colour.
+            palette = new[] { at };
+            rightPalette = palette;
+        }
+        else if (visualMode == Model.VisualMode.FollowModel)
+        {
+            var leftWorking = leftTool is not null && leftState == ActivityState.Working;
+            var rightWorking = rightTool is not null && rightState == ActivityState.Working;
+
+            if (leftWorking && rightWorking && leftTool is { } l1 && rightTool is { } r1)
+            {
+                isDual = true;
+                palette = Model.ProviderIdentity.StreamPalette(l1);
+                rightPalette = Model.ProviderIdentity.StreamPalette(r1);
+            }
+            else if (leftWorking && leftTool is { } l2)
+            {
+                palette = Model.ProviderIdentity.StreamPalette(l2);
+                rightPalette = palette;
+            }
+            else if (rightWorking && rightTool is { } r2)
+            {
+                palette = Model.ProviderIdentity.StreamPalette(r2);
+                rightPalette = palette;
+            }
+            else if (leftTool is { } lt && rightTool is { } rt)
+            {
+                isDual = true;
+                palette = Model.ProviderIdentity.StreamPalette(lt);
+                rightPalette = Model.ProviderIdentity.StreamPalette(rt);
+            }
+            else if (leftTool is { } l)
+            {
+                palette = Model.ProviderIdentity.StreamPalette(l);
+                rightPalette = palette;
+            }
+            else if (rightTool is { } r)
+            {
+                palette = Model.ProviderIdentity.StreamPalette(r);
+                rightPalette = palette;
+            }
+        }
+
+        return (isDual, palette, rightPalette);
     }
 
     private DispatcherTimer? _sweepTimer;

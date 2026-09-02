@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using AgentIsland.UI.Theme;
 using AgentIsland.Usage;
 
@@ -85,6 +86,7 @@ public sealed class SteppedMeter : Grid
     private double _lastValue;
     private double _lastTimeFilled = -1;
     private double _lastTimeRatio;
+    private bool _layoutRefreshQueued;
 
     public SteppedMeter(Color color)
     {
@@ -94,6 +96,29 @@ public sealed class SteppedMeter : Grid
         RowDefinitions.Add(new RowDefinition { Height = new GridLength(2.5, GridUnitType.Pixel) });
         RowDefinitions.Add(new RowDefinition { Height = new GridLength(3.5, GridUnitType.Pixel) });
         SizeChanged += (_, e) => Rebuild(e.NewSize.Width);
+        Loaded += (_, _) => QueueLayoutRefresh();
+        IsVisibleChanged += (_, e) =>
+        {
+            if (e.NewValue is true) QueueLayoutRefresh();
+        };
+    }
+
+    private void QueueLayoutRefresh()
+    {
+        if (!IsLoaded || _layoutRefreshQueued) return;
+
+        _layoutRefreshQueued = true;
+        _ = Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() =>
+        {
+            _layoutRefreshQueued = false;
+            if (!IsLoaded || !IsVisible) return;
+
+            // Visibility/column changes can happen immediately before WPF's
+            // next measure pass. Re-read the final width after that pass so
+            // an update that arrived while the meter had no cells is painted.
+            Rebuild(ActualWidth);
+            RenderState();
+        }));
     }
 
     private void Rebuild(double width)
@@ -155,11 +180,28 @@ public sealed class SteppedMeter : Grid
 
     public void Update(double value, WindowUsage? window = null)
     {
-        _lastValue = value;
+        // Keep both values before checking whether layout has created the
+        // cells. UsagePage updates visibility and data in the same dispatcher
+        // turn, so the first call can legitimately arrive with zero cells.
+        _lastValue = double.IsFinite(value) ? Math.Clamp(value, 0, 100) : 0;
+        _lastTimeRatio = RemainingRatio(window);
+
+        var segments = _cells.Length;
+        if (segments == 0)
+        {
+            QueueLayoutRefresh();
+            return;
+        }
+
+        RenderState();
+    }
+
+    private void RenderState()
+    {
         var segments = _cells.Length;
         if (segments == 0) return;
 
-        var filled = Math.Floor(value / 100 * segments);
+        var filled = Math.Floor(_lastValue / 100 * segments);
         if (Math.Abs(filled - _lastFilled) >= 0.5 || _lastFilled < 0)
         {
             _lastFilled = filled;
@@ -178,18 +220,7 @@ public sealed class SteppedMeter : Grid
             }
         }
 
-        double remainingRatio = 0;
-        if (window is { ResetAt: { } resetAt } && resetAt > DateTimeOffset.Now)
-        {
-            double periodSeconds = window.PeriodSeconds is { } p && p > 0
-                ? p
-                : (window.IsLongPeriod ? 7 * 86400 : 5 * 3600);
-            var remainingSeconds = (resetAt - DateTimeOffset.Now).TotalSeconds;
-            remainingRatio = Math.Clamp(remainingSeconds / periodSeconds, 0, 1.0);
-        }
-        _lastTimeRatio = remainingRatio;
-
-        var timeFilled = Math.Floor(remainingRatio * segments);
+        var timeFilled = Math.Floor(_lastTimeRatio * segments);
         if (Math.Abs(timeFilled - _lastTimeFilled) >= 0.5 || _lastTimeFilled < 0)
         {
             _lastTimeFilled = timeFilled;
@@ -207,6 +238,20 @@ public sealed class SteppedMeter : Grid
                 brush.BeginAnimation(SolidColorBrush.ColorProperty, animation);
             }
         }
+    }
+
+    private static double RemainingRatio(WindowUsage? window)
+    {
+        double remainingRatio = 0;
+        if (window is { ResetAt: { } resetAt } && resetAt > DateTimeOffset.Now)
+        {
+            double periodSeconds = window.PeriodSeconds is { } p && p > 0
+                ? p
+                : (window.IsLongPeriod ? 7 * 86400 : 5 * 3600);
+            var remainingSeconds = (resetAt - DateTimeOffset.Now).TotalSeconds;
+            remainingRatio = Math.Clamp(remainingSeconds / periodSeconds, 0, 1.0);
+        }
+        return remainingRatio;
     }
 }
 

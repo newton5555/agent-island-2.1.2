@@ -106,6 +106,7 @@ public sealed class UsagePage : Border
             (_, _) => Dispatcher.BeginInvoke(Update);
         UsageStore.Shared.PropertyChanged += onUpdate;
         StylePreferenceStore.Shared.PropertyChanged += onUpdate;
+        QuotaDisplayModeStore.Shared.PropertyChanged += onUpdate;
         ProviderVisibilityStore.Shared.PropertyChanged += onUpdate;
         AntigravityUsageStore.Shared.PropertyChanged += onUpdate;
         GrokUsageStore.Shared.PropertyChanged += onUpdate;
@@ -114,6 +115,7 @@ public sealed class UsagePage : Border
         {
             UsageStore.Shared.PropertyChanged -= onUpdate;
             StylePreferenceStore.Shared.PropertyChanged -= onUpdate;
+            QuotaDisplayModeStore.Shared.PropertyChanged -= onUpdate;
             ProviderVisibilityStore.Shared.PropertyChanged -= onUpdate;
             AntigravityUsageStore.Shared.PropertyChanged -= onUpdate;
             GrokUsageStore.Shared.PropertyChanged -= onUpdate;

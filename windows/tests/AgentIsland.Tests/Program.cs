@@ -92,6 +92,7 @@ public static class Program
             ScannerCwdTests.RunAll();
             CodexPayloadParsingTests.RunAll();
             AntigravityQuotaTests.RunAll();
+            SteppedMeterTests.RunAll();
             ProviderLogoAnimationTests.RunAll();
             Console.WriteLine("ALL GREEN");
             return 0;

@@ -1067,26 +1067,38 @@ public sealed class SettingsWindow : Window
         var effects = DarkComboStyle.Apply(new ComboBox { Width = 130, VerticalAlignment = VerticalAlignment.Center });
         effects.Items.Add(L10n.Tr("Calm"));
         effects.Items.Add(L10n.Tr("Vivid"));
-        effects.SelectedIndex = LowPowerModeStore.Shared.Enabled ? 0 : 1;
+        effects.Items.Add(L10n.Tr("Follow model"));
+        effects.SelectedIndex = LowPowerModeStore.Shared.Mode switch
+        {
+            Model.VisualMode.Calm => 0,
+            Model.VisualMode.Vivid => 1,
+            Model.VisualMode.FollowModel => 2,
+            _ => 1,
+        };
         stack.Children.Add(new SettingsRowControl(
             "Visual mode",
             null,
             effects));
 
-        // Glow color rides under Vivid only — Calm has no ambient light for
-        // it to style. Row visibility keys on the USER choice, not the
-        // battery-saver override, so the saver never hides a setting.
+        // Glow color rides under Vivid only — Calm has no ambient light, Follow model follows the active AI.
         var glowRow = new SettingsRowControl("Glow color", null, GlowSwatches());
-        glowRow.Visibility = LowPowerModeStore.Shared.Enabled
-            ? Visibility.Collapsed
-            : Visibility.Visible;
+        glowRow.Visibility = LowPowerModeStore.Shared.Mode == Model.VisualMode.Vivid
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         stack.Children.Add(glowRow);
         effects.SelectionChanged += (_, _) =>
         {
-            LowPowerModeStore.Shared.Enabled = effects.SelectedIndex == 0;
-            glowRow.Visibility = effects.SelectedIndex == 0
-                ? Visibility.Collapsed
-                : Visibility.Visible;
+            var selectedMode = effects.SelectedIndex switch
+            {
+                0 => Model.VisualMode.Calm,
+                1 => Model.VisualMode.Vivid,
+                2 => Model.VisualMode.FollowModel,
+                _ => Model.VisualMode.Vivid,
+            };
+            LowPowerModeStore.Shared.Mode = selectedMode;
+            glowRow.Visibility = selectedMode == Model.VisualMode.Vivid
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         };
 
         // Interface scale (macOS row order: Visual mode → Glow color →

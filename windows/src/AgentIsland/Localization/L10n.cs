@@ -226,6 +226,7 @@ public static class L10n
         ["Silver"] = "银白",
         ["Calm"] = "清爽",
         ["Vivid"] = "流光",
+        ["Follow model"] = "跟随模型",
         ["network drop"] = "网络中断,已保留上次数据",
         ["Tint the island and pulse the peek pill when 5-hour usage nears your limit."] = "当 5 小时用量接近限额时，为岛和预览胶囊显示提醒效果",
         ["Warning"] = "警告",

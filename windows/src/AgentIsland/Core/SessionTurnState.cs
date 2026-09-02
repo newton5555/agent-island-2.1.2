@@ -185,6 +185,10 @@ public static class SessionTurnState
     {
         (string Source, string? Key, DateTimeOffset? Stamp, bool Spoke)? candidate = null;
         var seenSteps = new HashSet<int>();
+        // The transcript records a background command as RUNNING, then emits
+        // a later SYSTEM message when its task finishes. Scan newest-first so
+        // a completion is known before we reach the older RUNNING record.
+        var completedTaskIds = new HashSet<string>(StringComparer.Ordinal);
         var hasRunningTask = false;
 
         for (var i = lines.Count - 1; i >= 0; i--)
@@ -199,21 +203,35 @@ public static class SessionTurnState
                 ? idx
                 : null;
             var status = Jsonl.GetString(root, "status");
+            var source = Jsonl.GetString(root, "source");
+            var type = Jsonl.GetString(root, "type");
+            var content = Jsonl.GetString(root, "content");
             var isRunningStep = string.Equals(status, "RUNNING", StringComparison.OrdinalIgnoreCase);
+            var taskId = isRunningStep || IsAntigravityTaskFinished(source, type, status, content)
+                ? AntigravityTaskId(content)
+                : null;
+
+            if (taskId is not null && IsAntigravityTaskFinished(source, type, status, content))
+            {
+                completedTaskIds.Add(taskId);
+            }
 
             if (stepIndex is { } stepIdx)
             {
-                if (seenSteps.Add(stepIdx) && isRunningStep)
+                if (seenSteps.Add(stepIdx)
+                    && isRunningStep
+                    && (taskId is null || !completedTaskIds.Contains(taskId)))
                 {
                     hasRunningTask = true;
                 }
             }
-            else if (isRunningStep)
+            else if (isRunningStep
+                && (taskId is null || !completedTaskIds.Contains(taskId)))
             {
                 hasRunningTask = true;
             }
 
-            if (Jsonl.GetString(root, "source") is not { } source) continue;
+            if (source is null) continue;
 
             DateTimeOffset? stamp = null;
             if (root.TryGetProperty("created_at", out var created))
@@ -257,6 +275,53 @@ public static class SessionTurnState
 
         var isDone = c.Spoke && !hasRunningTask;
         return new SessionTurnStatus(isDone, c.Key, c.Stamp, IsRunning: hasRunningTask);
+    }
+
+    private static bool IsAntigravityTaskFinished(
+        string? source, string? type, string? status, string? content)
+    {
+        if (type == "RUN_COMMAND"
+            && string.Equals(status, "DONE", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return source == "SYSTEM"
+            && content?.Contains("finished with result", StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    private static string? AntigravityTaskId(string? content)
+    {
+        if (string.IsNullOrEmpty(content)) return null;
+        const string marker = "task id";
+        var markerStart = content.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (markerStart < 0) return null;
+
+        var start = markerStart + marker.Length;
+        while (start < content.Length && char.IsWhiteSpace(content[start])) start++;
+        if (start < content.Length && content[start] == ':')
+        {
+            start++;
+            while (start < content.Length && char.IsWhiteSpace(content[start])) start++;
+        }
+        if (start >= content.Length) return null;
+
+        var quote = content[start] is '"' or '\'' ? content[start] : '\0';
+        if (quote != '\0')
+        {
+            start++;
+            var endQuote = content.IndexOf(quote, start);
+            return endQuote > start ? content[start..endQuote] : null;
+        }
+
+        var end = start;
+        while (end < content.Length
+            && !char.IsWhiteSpace(content[end])
+            && content[end] is not '"' and not '\'')
+        {
+            end++;
+        }
+        return end > start ? content[start..end] : null;
     }
 
     private static bool AntigravityHasToolCalls(System.Text.Json.JsonElement root)

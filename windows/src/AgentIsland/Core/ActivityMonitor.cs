@@ -204,7 +204,7 @@ public sealed class ActivityMonitor : INotifyPropertyChanged
                 : TaskScheduler.Default);
     }
 
-    private void Apply(List<ScannedSession> sessions, DateTimeOffset now)
+    internal void Apply(List<ScannedSession> sessions, DateTimeOffset now)
     {
         // Usage-level attention (rate-limited / auth-required red) only
         // applies to providers switched ON in Settings. Someone who only
@@ -297,17 +297,17 @@ public sealed class ActivityMonitor : INotifyPropertyChanged
         || message.Contains("ssl")
         || message.Contains("tls");
 
-    /// A turn still waiting on the user outranks everything. But once the
-    /// user acknowledged it, the turn is old news: it must not pin the logo
-    /// in a static needsYou (masking a genuinely running sibling). Stalled
-    /// stays above working so real anomalies surface; below unacked needsYou
-    /// so it can't eat an actionable alarm.
+    /// A genuinely running turn must never be masked by an older or
+    /// unacknowledged needsYou turn: Working outranks both unacknowledged
+    /// and acknowledged needsYou. When no working session exists, unacknowledged
+    /// needsYou outranks acknowledged needsYou, and both outrank idle so finished
+    /// turns still surface. Stalled stays above working so anomalies surface.
     private static int SelectionPriority(ScannedSession session, Func<ActiveThread, bool> isAcknowledged) =>
         session.Status switch
         {
-            ActivityState.NeedsYou => isAcknowledged(MakeThread(session)) ? 1 : 4,
-            ActivityState.Stalled => 3,
-            ActivityState.Working => 2,
+            ActivityState.Stalled => 4,
+            ActivityState.Working => 3,
+            ActivityState.NeedsYou => isAcknowledged(MakeThread(session)) ? 1 : 2,
             _ => 0,
         };
 
