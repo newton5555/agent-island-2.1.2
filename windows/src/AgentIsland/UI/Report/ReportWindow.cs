@@ -27,15 +27,18 @@ public sealed class ReportWindow : Window
         Monthly,
     }
 
-    private static readonly Dictionary<Kind, ReportWindow> Open = new();
+    private static ReportWindow? _current;
 
-    private readonly Kind _kind;
+    private Kind _kind;
     private readonly TextBlock _coach;
     private readonly Button _copy;
     private readonly StackPanel _actions;
     private readonly Grid _cardHost;
+    private readonly Border _cardHeaderHotspot;
+    private const double CardHeaderHotspotHeight = 72.0;
     private readonly StackPanel _pager;
     private readonly TextBlock _periodLabel;
+    private readonly Border _periodBadge;
     private readonly PagerCircle _back;
     private readonly PagerCircle _forward;
     private readonly PagerCircle _calendarButton;
@@ -51,14 +54,18 @@ public sealed class ReportWindow : Window
 
     public static void Show(Kind kind)
     {
-        if (Open.TryGetValue(kind, out var existing))
+        if (_current != null && _current.IsLoaded)
         {
-            WindowActivation.BringToFront(existing);
+            _current.SwitchKind(kind);
+            WindowActivation.BringToFront(_current);
             return;
         }
         var window = new ReportWindow(kind);
-        Open[kind] = window;
-        window.Closed += (_, _) => Open.Remove(kind);
+        _current = window;
+        window.Closed += (_, _) =>
+        {
+            if (_current == window) _current = null;
+        };
         window.Show();
         WindowActivation.BringToFront(window);
     }
@@ -80,46 +87,99 @@ public sealed class ReportWindow : Window
         Topmost = false;
         System.Windows.Media.TextOptions.SetTextFormattingMode(this, TextFormattingMode.Display);
 
+        var zh = Localization.L10n.IsChinese;
+
         // ← period label → row above the card (macOS pager): the right edge
         // is the current period, the left edge the earliest scanned day, and
         // the calendar anchors the window to any start date.
-        _back = new PagerCircle("\uE76B");
-        _back.Clicked += () => Flip(_anchorDate is null ? _pageOffset + 1 : 1);
-        _forward = new PagerCircle("");
-        _forward.Clicked += () => Flip(_anchorDate is null ? _pageOffset - 1 : 0);
+        _back = new PagerCircle("\uE76B", zh ? "上一周期 (←)" : "Previous period (←)");
+        _back.Clicked += OnBackClicked;
+        _forward = new PagerCircle("", zh ? "下一周期 (→)" : "Next period (→)");
+        _forward.Clicked += OnForwardClicked;
+
         _periodLabel = new TextBlock
         {
             FontFamily = IslandFonts.Ui,
             FontSize = 12,
             FontWeight = FontWeights.Bold,
-            Foreground = Brushes.Black,
-            MinWidth = 140,
+            Foreground = IslandColors.Brush(IslandColors.White(0.95)),
+            MinWidth = 128,
             TextAlignment = TextAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
         };
         Typography.SetNumeralAlignment(_periodLabel, System.Windows.FontNumeralAlignment.Tabular);
-        var periodBadge = new Border
+
+        _periodBadge = new Border
         {
-            // Visuals reference the white pill style of the "Copy image" button below,
-            // with a 1px border and soft shadow to stay sharply visible on a white desktop.
-            Background = Brushes.White,
-            BorderBrush = IslandColors.Brush(Color.FromArgb(0x28, 0x00, 0x00, 0x00)),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(8, 4, 8, 4),
+            VerticalAlignment = VerticalAlignment.Center,
+            Background = Brushes.Transparent,
+            Child = _periodLabel,
+        };
+        _periodBadge.MouseEnter += (_, _) =>
+        {
+            if (_pageOffset > 0 || _anchorDate is not null)
+            {
+                _periodBadge.Background = IslandColors.Brush(IslandColors.White(0.12));
+            }
+        };
+        _periodBadge.MouseLeave += (_, _) =>
+        {
+            _periodBadge.Background = Brushes.Transparent;
+        };
+        _periodBadge.MouseLeftButtonUp += (_, args) =>
+        {
+            args.Handled = true;
+            if (_pageOffset > 0 || _anchorDate is not null)
+            {
+                Flip(0);
+            }
+        };
+
+        _calendarButton = new PagerCircle("", zh ? "选择指定日期 (日历)" : "Select date...");
+        _calendarButton.Clicked += OpenCalendar;
+
+        var capsuleStack = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        capsuleStack.Children.Add(_back);
+        capsuleStack.Children.Add(_periodBadge);
+        capsuleStack.Children.Add(_forward);
+
+        // Divider
+        capsuleStack.Children.Add(new Border
+        {
+            Width = 1,
+            Height = 14,
+            Background = IslandColors.Brush(IslandColors.White(0.12)),
+            Margin = new Thickness(4, 0, 4, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        capsuleStack.Children.Add(_calendarButton);
+
+        var capsule = new Border
+        {
+            Background = IslandColors.Brush(Color.FromRgb(0x13, 0x16, 0x1C)),
+            BorderBrush = IslandColors.Brush(IslandColors.White(0.15)),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(15),
-            Height = 30,
+            CornerRadius = new CornerRadius(17),
+            Height = 34,
+            Padding = new Thickness(4, 0, 4, 0),
             VerticalAlignment = VerticalAlignment.Center,
             Effect = new System.Windows.Media.Effects.DropShadowEffect
             {
-                ShadowDepth = 2,
+                ShadowDepth = 3,
                 Direction = 270,
-                BlurRadius = 6,
+                BlurRadius = 16,
                 Color = Colors.Black,
-                Opacity = 0.10,
+                Opacity = 0.35,
             },
-            Child = _periodLabel,
+            Child = capsuleStack,
         };
-        _calendarButton = new PagerCircle("");
-        _calendarButton.Clicked += OpenCalendar;
+
         _pager = new StackPanel
         {
             Orientation = Orientation.Horizontal,
@@ -129,26 +189,32 @@ public sealed class ReportWindow : Window
         };
         _pager.MouseEnter += (_, _) => SetPagerVisible(true);
         _pager.MouseLeave += (_, _) => CheckHidePager();
-        _pager.Children.Add(_back);
-        _periodLabel.Margin = new Thickness(14, 0, 14, 0);
-        _pager.Children.Add(periodBadge);
-        _pager.Children.Add(_forward);
-        _calendarButton.Margin = new Thickness(10, 0, 0, 0);
-        _pager.Children.Add(_calendarButton);
+        _pager.Children.Add(capsule);
+
+        // Hover hotspot: only hovering the top designated header height of the card
+        // or the pager itself reveals the navigation controls.
+        _cardHeaderHotspot = new Border
+        {
+            VerticalAlignment = VerticalAlignment.Top,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Height = CardHeaderHotspotHeight,
+            Background = Brushes.Transparent,
+        };
+        _cardHeaderHotspot.MouseEnter += (_, _) => SetPagerVisible(true);
+        _cardHeaderHotspot.MouseLeave += (_, _) => CheckHidePager();
+
         _cardHost = new Grid();
-        _cardHost.MouseEnter += (_, _) => SetPagerVisible(true);
-        _cardHost.MouseLeave += (_, _) => CheckHidePager();
         _pagerHideTimer = new DispatcherTimer
         {
             // Leave enough time to cross the small transparent gap between
-            // the card and the pager without making the chrome feel sticky.
+            // the card header and the pager without making the chrome feel sticky.
             Interval = TimeSpan.FromMilliseconds(300),
         };
         _pagerHideTimer.Tick += (_, _) =>
         {
             _pagerHideTimer.Stop();
             if (_calendar is { IsOpen: true }) return;
-            if (!_cardHost.IsMouseOver && !_pager.IsMouseOver)
+            if (!_cardHeaderHotspot.IsMouseOver && !_pager.IsMouseOver)
             {
                 SetPagerVisible(false);
             }
@@ -210,6 +276,8 @@ public sealed class ReportWindow : Window
         KeyDown += (_, e) =>
         {
             if (e.Key == Key.Escape) Close();
+            else if (e.Key == Key.Left && _back.Enabled) OnBackClicked();
+            else if (e.Key == Key.Right && _forward.Enabled) OnForwardClicked();
         };
         MouseLeftButtonDown += (_, _) =>
         {
@@ -248,6 +316,24 @@ public sealed class ReportWindow : Window
         ? ((WeeklyReportData)_display).RangeText
         : ((MonthlyReportData)_display).MonthText;
 
+    public void SwitchKind(Kind target)
+    {
+        if (_kind == target) return;
+        _kind = target;
+        _pageOffset = 0;
+        _anchorDate = null;
+        _loading = false;
+        Title = _kind == Kind.Weekly
+            ? Localization.L10n.Tr("Weekly report")
+            : Localization.L10n.Tr("Share monthly report");
+        _display = CurrentData();
+        RebuildCard();
+        if (_kind == Kind.Weekly)
+        {
+            AlignCurrentWeek();
+        }
+    }
+
     /// Rebuild the on-screen card from the current display data and refresh
     /// every piece of pager chrome. Also resets the export cache — copy and
     /// save must ship exactly the page on screen.
@@ -265,6 +351,7 @@ public sealed class ReportWindow : Window
         };
         _cardHost.Children.Clear();
         _cardHost.Children.Add(card);
+        _cardHost.Children.Add(_cardHeaderHotspot);
         _cardHost.Children.Add(CloseDisc());
         UpdatePagerChrome();
         Dispatcher.BeginInvoke(DispatcherPriority.Background, () => _ = ExportRender());
@@ -274,17 +361,78 @@ public sealed class ReportWindow : Window
     {
         _periodLabel.Text = PeriodText;
         _periodLabel.Opacity = _loading ? 0.45 : 1;
-        var interval = _kind == Kind.Weekly
-            ? ReportPeriods.WeekInterval(_pageOffset)
-            : ReportPeriods.MonthInterval(_pageOffset);
-        _back.Enabled = !_loading && ReportPeriods.HasData(interval.Start, ReportPeriods.EarliestDataDay());
-        _forward.Enabled = (_pageOffset > 0 || _anchorDate is not null) && !_loading;
+
+        bool canGoBack;
+        bool canGoForward;
+        if (_anchorDate is { } anchor)
+        {
+            var earliest = ReportPeriods.EarliestDataDay();
+            canGoBack = !_loading && anchor > earliest;
+            canGoForward = !_loading;
+        }
+        else
+        {
+            var interval = _kind == Kind.Weekly
+                ? ReportPeriods.WeekInterval(_pageOffset)
+                : ReportPeriods.MonthInterval(_pageOffset);
+            canGoBack = !_loading && ReportPeriods.HasData(interval.Start, ReportPeriods.EarliestDataDay());
+            canGoForward = _pageOffset > 0 && !_loading;
+        }
+
+        _back.Enabled = canGoBack;
+        _forward.Enabled = canGoForward;
         _calendarButton.Enabled = !_loading && !Core.AppEnvironment.IsDemo;
-        _calendarButton.Tint = _anchorDate is null ? Color.FromRgb(0x15, 0x17, 0x1C) : Color.FromRgb(0x00, 0x66, 0xCC);
+        _calendarButton.Tint = _anchorDate is null ? IslandColors.White(0.90) : Color.FromRgb(0x3D, 0xD6, 0x8C);
+
+        var isHistorical = _pageOffset > 0 || _anchorDate is not null;
+        _periodBadge.ToolTip = isHistorical
+            ? (Localization.L10n.IsChinese ? "点击回到最新周期" : "Click to return to current period")
+            : null;
+        _periodBadge.Cursor = isHistorical ? Cursors.Hand : Cursors.Arrow;
+
         // While a past page is still assembling, the card shows the previous
         // period — exporting would ship the wrong week.
         _actions.IsEnabled = !_loading;
         _actions.Opacity = _loading ? 0.5 : 1;
+    }
+
+    private void OnBackClicked()
+    {
+        if (_anchorDate is { } anchor)
+        {
+            var prev = _kind == Kind.Weekly ? anchor.AddDays(-7) : anchor.AddMonths(-1);
+            if (prev >= ReportPeriods.EarliestDataDay())
+            {
+                SetAnchor(prev);
+            }
+        }
+        else
+        {
+            Flip(_pageOffset + 1);
+        }
+    }
+
+    private void OnForwardClicked()
+    {
+        if (_anchorDate is { } anchor)
+        {
+            var next = _kind == Kind.Weekly ? anchor.AddDays(7) : anchor.AddMonths(1);
+            if (next >= DateTime.Today || (_kind == Kind.Weekly && next.AddDays(7) > DateTime.Today))
+            {
+                Flip(0);
+            }
+            else
+            {
+                SetAnchor(next);
+            }
+        }
+        else
+        {
+            if (_pageOffset > 0)
+            {
+                Flip(_pageOffset - 1);
+            }
+        }
     }
 
     private void Flip(int target)
@@ -342,7 +490,10 @@ public sealed class ReportWindow : Window
 
     private void OpenCalendar()
     {
-        _calendar = new ReportCalendarPopup(ReportPeriods.EarliestDataDay(), SetAnchor)
+        var currentSelected = _anchorDate ?? (_kind == Kind.Weekly
+            ? ReportPeriods.WeekInterval(_pageOffset).Start
+            : ReportPeriods.MonthInterval(_pageOffset).Start);
+        _calendar = new ReportCalendarPopup(ReportPeriods.EarliestDataDay(), SetAnchor, currentSelected)
         {
             PlacementTarget = _calendarButton,
         };
@@ -390,6 +541,17 @@ public sealed class ReportWindow : Window
     private async void SetAnchor(DateTime day)
     {
         var start = day.Date;
+        if (_kind == Kind.Weekly && start >= ReportPeriods.WeekInterval(0).Start)
+        {
+            Flip(0);
+            return;
+        }
+        if (_kind == Kind.Monthly && start.Year == DateTime.Today.Year && start.Month == DateTime.Today.Month)
+        {
+            Flip(0);
+            return;
+        }
+
         _anchorDate = start;
         _loading = true;
         UpdatePagerChrome();
@@ -433,6 +595,7 @@ public sealed class ReportWindow : Window
         };
         disc.MouseEnter += (_, _) =>
         {
+            SetPagerVisible(true);
             disc.Background = IslandColors.Brush(Color.FromRgb(0xC4, 0x2B, 0x1C));
             glyph.Foreground = Brushes.White;
         };
@@ -440,6 +603,7 @@ public sealed class ReportWindow : Window
         {
             disc.Background = IslandColors.Brush(IslandColors.White(0.10));
             glyph.Foreground = IslandColors.Brush(IslandColors.White(0.65));
+            CheckHidePager();
         };
         disc.MouseLeftButtonDown += (_, e) => e.Handled = true; // not a drag
         disc.MouseLeftButtonUp += (_, e) =>
@@ -602,8 +766,7 @@ public sealed class ReportWindow : Window
     }
 }
 
-/// The pager's 30pt circular icon button (macOS ReportPagerArrow): white
-/// pill face matching the "Copy image" button below, dimmed when disabled.
+/// The pager's circular icon button inside the unified floating capsule.
 internal sealed class PagerCircle : Border
 {
     private readonly TextBlock _glyph;
@@ -613,26 +776,22 @@ internal sealed class PagerCircle : Border
 
     public event Action? Clicked;
 
-    public PagerCircle(string glyph)
+    public PagerCircle(string glyph, string? toolTip = null)
     {
-        Width = 30;
-        Height = 30;
-        CornerRadius = new CornerRadius(15);
+        Width = 28;
+        Height = 28;
+        CornerRadius = new CornerRadius(14);
         VerticalAlignment = VerticalAlignment.Center;
-        Effect = new System.Windows.Media.Effects.DropShadowEffect
+        if (!string.IsNullOrEmpty(toolTip))
         {
-            ShadowDepth = 2,
-            Direction = 270,
-            BlurRadius = 6,
-            Color = Colors.Black,
-            Opacity = 0.10,
-        };
+            ToolTip = toolTip;
+        }
         _glyph = new TextBlock
         {
             Text = glyph,
             FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"),
-            FontSize = 11,
-            FontWeight = FontWeights.Bold,
+            FontSize = 10,
+            FontWeight = FontWeights.SemiBold,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
         };
@@ -670,7 +829,7 @@ internal sealed class PagerCircle : Border
     }
 
     /// Optional glyph tint override while enabled (the calendar button goes
-    /// brighter when a date anchor is active).
+    /// brighter brand teal when a date anchor is active).
     public Color Tint
     {
         set
@@ -682,21 +841,12 @@ internal sealed class PagerCircle : Border
 
     private void Render()
     {
-        // Visuals reference the white pill style of the "Copy image" button below,
-        // with a 1px border and soft shadow to stay sharply visible on a white desktop.
-        var background = _enabled
-            ? (_hovered
-                ? Color.FromArgb(0xFF, 0xEE, 0xF0, 0xF2)
-                : Colors.White)
-            : Color.FromArgb(0xF0, 0xF6, 0xF7, 0xF9);
-        Background = IslandColors.Brush(background);
-        BorderBrush = IslandColors.Brush(
-            _enabled
-                ? (_hovered ? Color.FromArgb(0x50, 0x00, 0x00, 0x00) : Color.FromArgb(0x28, 0x00, 0x00, 0x00))
-                : Color.FromArgb(0x14, 0x00, 0x00, 0x00));
-        BorderThickness = new Thickness(1);
+        Background = _enabled
+            ? (_hovered ? IslandColors.Brush(IslandColors.White(0.15)) : Brushes.Transparent)
+            : Brushes.Transparent;
         _glyph.Foreground = IslandColors.Brush(
-            _enabled ? (_tintOverride ?? Color.FromRgb(0x15, 0x17, 0x1C)) : Color.FromRgb(0xA0, 0xA4, 0xAC));
+            _enabled ? (_tintOverride ?? IslandColors.White(0.90)) : IslandColors.White(0.25));
         Cursor = _enabled ? Cursors.Hand : Cursors.Arrow;
+        Opacity = _enabled ? 1.0 : 0.35;
     }
 }
