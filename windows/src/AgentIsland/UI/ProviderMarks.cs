@@ -36,6 +36,19 @@ public static class ProviderMarks
                 return image;
             }
         }
+        if (BrandGeometry.PathData(provider) is { } data)
+        {
+            return new System.Windows.Shapes.Path
+            {
+                Data = Geometry.Parse("F1 " + data),
+                Fill = BrandGeometry.BrandBrush(provider, tintOpacity),
+                Width = size,
+                Height = size,
+                Stretch = Stretch.Uniform,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+        }
         else if (MaskFor(provider) is { } mask)
         {
             return new Rectangle

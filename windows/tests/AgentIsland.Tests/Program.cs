@@ -94,6 +94,7 @@ public static class Program
             AntigravityQuotaTests.RunAll();
             SteppedMeterTests.RunAll();
             ProviderLogoAnimationTests.RunAll();
+            BrandGeometryTests.RunAll();
             Console.WriteLine("ALL GREEN");
             return 0;
         }

@@ -31,11 +31,31 @@ public sealed class SoloProviderBadge : Grid
             // (macOS bottom padding 30).
             Margin = new Thickness(12, 0, 12, 30),
         };
-        stack.Children.Add(BrandGeometry.PathData(provider) is { } data
-            ? new System.Windows.Shapes.Path
+        if (provider == DisplayProvider.Antigravity)
+        {
+            // Optical sizing: the arch's narrow dome requires ~34px bounding box
+            // to match the visual mass and perceived volume of Codex's dense circle
+            // and Cursor's cube (30px).
+            var mark = ProviderMarks.Mark(provider, 34);
+            if (mark is FrameworkElement fe)
+            {
+                fe.HorizontalAlignment = HorizontalAlignment.Center;
+                fe.Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    ShadowDepth = 0,
+                    BlurRadius = 30, // macOS shadow radius 10 is a gaussian sigma; ~3x here
+                    Color = color,
+                    Opacity = 0.35,
+                };
+            }
+            stack.Children.Add(mark);
+        }
+        else if (BrandGeometry.PathData(provider) is { } data)
+        {
+            stack.Children.Add(new System.Windows.Shapes.Path
             {
                 Data = Geometry.Parse("F1 " + data),
-                Fill = IslandColors.Brush(IslandColors.Alpha(color, 0.95)),
+                Fill = BrandGeometry.BrandBrush(provider, 0.95),
                 Width = 30,
                 Height = 30,
                 Stretch = Stretch.Uniform,
@@ -45,10 +65,13 @@ public sealed class SoloProviderBadge : Grid
                     ShadowDepth = 0,
                     BlurRadius = 30, // macOS shadow radius 10 is a gaussian sigma; ~3x here
                     Color = color,
-                    Opacity = 0.30,
+                    Opacity = 0.35,
                 },
-            }
-            : (UIElement)new System.Windows.Shapes.Ellipse
+            });
+        }
+        else
+        {
+            stack.Children.Add(new System.Windows.Shapes.Ellipse
             {
                 Width = 30,
                 Height = 30,
@@ -56,6 +79,7 @@ public sealed class SoloProviderBadge : Grid
                 StrokeThickness = 1.5,
                 HorizontalAlignment = HorizontalAlignment.Center,
             });
+        }
         stack.Children.Add(new TextBlock
         {
             Text = ProviderIdentity.AlarmName(provider),
